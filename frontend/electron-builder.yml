@@ -1,0 +1,12 @@
+appId: club.whatsai
+productName: WhatsAI-Client
+copyright: Copyright © Ben Chiong
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - from: .
+    filter:
+      - package.json
+      - app
+publish: null
