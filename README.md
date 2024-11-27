@@ -3,7 +3,7 @@ A very easy to use AIGC UI client fully base on ComfyUI.
 
 <img src="https://github.com/benchiong/whatsai-client/blob/main/images/whasai-cover.jpg">
 
-https://github.com/benchiong/whatsai-client/blob/main/images/20241127_180745.mp4
+
 
 WhatsAI is a client inspired by ComfyBox, without complex graph nodes, just very brain friendly UI
 
