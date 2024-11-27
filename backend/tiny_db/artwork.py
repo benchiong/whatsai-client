@@ -18,6 +18,7 @@ class ArtworkTable:
 
     table_name = db_path_dir / 'art.json'
     DataModel = Artwork
+
     @classmethod
     async def get_artworks(cls, media_type: MediaType | None):
         async with AIOTinyDB(cls.table_name) as db:

@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   BrowserWindowConstructorOptions,
   Rectangle,
+  Menu
 } from "electron";
 import Store from "electron-store";
 
@@ -69,7 +70,7 @@ export const createWindow = (
   };
 
   state = ensureVisibleOnSomeDisplay(restore());
-
+  Menu.setApplicationMenu(null)
   const win = new BrowserWindow({
     ...state,
     ...options,

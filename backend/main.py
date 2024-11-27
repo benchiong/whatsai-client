@@ -1,11 +1,11 @@
 import asyncio
 import threading
-import time
 
 import uvicorn
 from misc.argparser import args
 from misc.logger import logger, Logger
 from misc.prompt_worker import PromptWorker
+from misc.whatsai_dirs import init_file_paths
 
 
 def start_server():
@@ -29,6 +29,7 @@ def start_worker():
     logger.debug("worker started.")
 
 if __name__ == '__main__':
+    init_file_paths()
     start_worker()
     start_server()
 

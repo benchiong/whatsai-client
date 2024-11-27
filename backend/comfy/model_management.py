@@ -550,9 +550,13 @@ def loaded_models(only_currently_used=False):
         output.append(m.model)
     return output
 
-def cleanup_models(keep_clone_weights_loaded=False):
+def cleanup_models(keep_clone_weights_loaded=False, force_delete=False):
     to_delete = []
     for i in range(len(current_loaded_models)):
+        if force_delete:
+            to_delete = [i] + to_delete
+            continue
+
         if sys.getrefcount(current_loaded_models[i].model) <= 2:
             if not keep_clone_weights_loaded:
                 to_delete = [i] + to_delete

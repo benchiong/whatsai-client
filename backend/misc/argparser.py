@@ -6,7 +6,7 @@ from comfy.cli_args import args as comfy_args
 # https://www.reddit.com/r/comfyui/comments/1cx123b/comfyui_generating_black_images/
 comfy_args.force_upcast_attention = True
 comfy_args.use_split_cross_attention = True
-
+comfy_args.lowvram = True
 
 parser = argparse.ArgumentParser()
 

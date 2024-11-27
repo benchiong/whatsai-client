@@ -56,8 +56,6 @@ class CardModelTable(BaseTable):
             if force_renew:
                 db.truncate()
 
-                print("db. truncate")
-
             for card_name in builtin_cards_map.keys():
                 Q = Query()
                 card_info_in_db = db.search(Q.card_name == card_name)

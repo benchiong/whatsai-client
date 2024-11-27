@@ -1,8 +1,12 @@
+import os
 from pathlib import Path
 
 from data_type.whatsai_artwork import MediaType
 
-base_dir = Path.home() / 'whatsai'
+if os.name == 'nt':
+    base_dir = Path("D:/") / 'whatsai'
+else:
+    base_dir = Path.home() / 'whatsai'
 """ The data dir of whatsai, we need it because python exe file need it outside the project. """
 
 
@@ -35,8 +39,6 @@ def init_file_paths():
     global file_paths_to_init
     for file_path in file_paths_to_init:
         file_path.mkdir(exist_ok=True, parents=True)
-    print("dirs inited")
-
 
 def get_dir_of_media_type(media_type: MediaType):
     if media_type == 'image':

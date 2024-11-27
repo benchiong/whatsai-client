@@ -1,5 +1,6 @@
 import collections
 import inspect
+import weakref
 from abc import ABC, abstractmethod
 from types import UnionType
 from typing import Literal, get_origin, get_args
@@ -38,7 +39,6 @@ class Func(ABC):
         if self.cache_out:
             self.last_inputs = args, kwargs
             self.last_out = out
-
         return out
 
     @property

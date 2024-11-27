@@ -1,4 +1,4 @@
-import heapq
+import gc
 import struct
 import threading
 import traceback
@@ -6,8 +6,10 @@ from io import BytesIO
 
 from PIL import Image, ImageOps
 
-from tiny_db.prompt import Prompt
-from tiny_db.task import TaskStatus, Task
+from comfy.model_management import cleanup_models, current_loaded_models, get_free_memory
+from data_type.whatsai_prompt import Prompt
+from tiny_db.task import TaskTable
+from data_type.whatsai_task import TaskStatus
 from tiny_db.card_info import CardModelTable
 from misc.logger import logger
 from misc.websocket_manager import WebsocketManager
@@ -25,8 +27,7 @@ class TaskQueue:
     @classmethod
     def put(cls, prompt: Prompt, client_id: str):
         with cls.mutex:
-            task_dict = Task.add_task(client_id, prompt)
-            # heapq.heappush(cls.queue, task_dict)
+            task_dict = TaskTable.add_task(client_id, prompt)
             cls.queue.append(task_dict)
             cls.not_empty.notify()
 
@@ -37,9 +38,8 @@ class TaskQueue:
                 cls.not_empty.wait(timeout=timeout)
                 if len(cls.queue) == 0:
                     return None
-            # task_dict = heapq.heappop(cls.queue)
             task_dict = cls.queue.pop(0)
-            Task.update_task_status(task_dict.get('task_id'), TaskStatus.processing)
+            TaskTable.update_task_status(task_dict.get('task_id'), TaskStatus.processing)
             return task_dict
 
 class EventTypes:
@@ -71,12 +71,13 @@ class PromptWorker:
             task_dict = TaskQueue.get()
             if not task_dict:
                 continue
-            task = Task.DataModel(**task_dict)
+            task = TaskTable.DataModel(**task_dict)
             logger.debug(task)
             cls.process_prompt(task)
 
     @classmethod
-    def process_prompt(cls, task: Task.DataModel):
+    def process_prompt(cls, task: TaskTable.DataModel):
+        logger.debug("start processing prompt")
         cls.start_task(task)
 
         card_name = task.prompt.card_name
@@ -86,6 +87,12 @@ class PromptWorker:
         if cls.is_card_cached(card_name):
             card = cls.cached_card
         else:
+            cls.cached_card = None
+            gc.collect()
+            print(current_loaded_models, get_free_memory())
+            cleanup_models()
+            print(current_loaded_models, get_free_memory())
+
             card_class = cls.get_card_class(card_name)
             if not card_class:
                 cls.fail_task(task, 'Card: {} not found'.format(card_name))
@@ -116,7 +123,7 @@ class PromptWorker:
             cls.fail_task(task, str(e))
 
     @classmethod
-    def start_task(cls, task: Task.DataModel):
+    def start_task(cls, task: TaskTable.DataModel):
         cls.send_sync(
             event=EventTypes.TASK_START,
             data=task.model_dump(),
@@ -124,9 +131,9 @@ class PromptWorker:
         )
 
         with TaskQueue.mutex:
-            Task.update_task_status(task_id=task.task_id, status=TaskStatus.processing)
+            TaskTable.update_task_status(task_id=task.task_id, status=TaskStatus.processing)
     @classmethod
-    def preview_task(cls, task: Task.DataModel, info: dict):
+    def preview_task(cls, task: TaskTable.DataModel, info: dict):
         cls.send_sync(
             event=EventTypes.TASK_PROCESSING,
             data={
@@ -136,10 +143,10 @@ class PromptWorker:
             client_id=task.client_id
         )
         with TaskQueue.mutex:
-            Task.update_task_status(task_id=task.task_id, status=TaskStatus.processing, preview_info=info)
+            TaskTable.update_task_status(task_id=task.task_id, status=TaskStatus.processing, preview_info=info)
 
     @classmethod
-    def fail_task(cls, task: Task.DataModel, reason: str):
+    def fail_task(cls, task: TaskTable.DataModel, reason: str):
         data = {
             **task.model_dump(),
             'reason': reason,
@@ -152,10 +159,10 @@ class PromptWorker:
         )
 
         with TaskQueue.mutex:
-            Task.update_task_status(task_id=task.task_id, status=TaskStatus.failed)
+            TaskTable.update_task_status(task_id=task.task_id, status=TaskStatus.failed)
 
     @classmethod
-    def finish_task(cls, task: Task.DataModel, results: dict):
+    def finish_task(cls, task: TaskTable.DataModel, results: dict):
         data = {
             **task.model_dump(),
             'outputs': results,
@@ -168,7 +175,7 @@ class PromptWorker:
         )
 
         with TaskQueue.mutex:
-            Task.update_task_status(task_id=task.task_id, status=TaskStatus.finished, outputs=results)
+            TaskTable.update_task_status(task_id=task.task_id, status=TaskStatus.finished, outputs=results)
 
     @classmethod
     def is_card_cached(cls, card_name: str):

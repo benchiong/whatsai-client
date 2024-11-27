@@ -1,3 +1,5 @@
+import gc
+import traceback
 from abc import ABC, abstractmethod
 
 from .comp import Comp
@@ -55,8 +57,10 @@ class Card(ABC):
 
         if errors:
             raise ValidException(str(errors))
-
-        return self.run(base_inputs=base_inputs, addon_inputs=addon_inputs, valid_func_inputs=valid_func_inputs)
+        try:
+            return self.run(base_inputs=base_inputs, addon_inputs=addon_inputs, valid_func_inputs=valid_func_inputs)
+        except Exception as e:
+            traceback.print_exc()
 
     def create_addons_by_inputs(self, addon_inputs):
         errors = []

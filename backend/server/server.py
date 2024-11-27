@@ -6,7 +6,6 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
-from misc.whatsai_dirs import init_file_paths
 from tiny_db.init import initialize_dbs
 from tiny_db.model_downloading_info import ModelDownloadInfoTable
 from .sockets import sio
@@ -23,7 +22,6 @@ def recovery_download_tasks():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await initialize_dbs()
-    init_file_paths()
     recovery_download_tasks()
     yield
 

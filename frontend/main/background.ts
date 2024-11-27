@@ -1,5 +1,5 @@
 import path from "path";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Menu } from "electron";
 import serve from "electron-serve";
 import { createWindow } from "./helpers";
 const { spawn } = require("child_process");
@@ -11,31 +11,6 @@ if (isProd) {
 } else {
   app.setPath("userData", `${app.getPath("userData")} (development)`);
 }
-
-(async () => {
-  await app.whenReady();
-  await create_main_window();
-
-  // // https://stackoverflow.com/questions/67146654/how-to-compile-python-electron-js-into-desktop-app-exe
-  // const pythonExePath = path.join(__dirname, "python-backend-exe");
-  // var python = require("child_process").execFile(pythonExePath);
-  // console.log("start python");
-
-  const pythonExePath = path.join(__dirname, "python-backend-exe");
-  const pythonProcess = spawn(pythonExePath);
-
-  pythonProcess.stdout.on("data", (data) => {
-    console.log(`stdout: ${data}`);
-  });
-
-  pythonProcess.stderr.on("data", (data) => {
-    console.error(`stderr: ${data}`);
-  });
-
-  pythonProcess.on("close", (code) => {
-    console.log(`child process exited with code ${code}`);
-  });
-})();
 
 const create_main_window = async () => {
   const options = {
@@ -54,6 +29,31 @@ const create_main_window = async () => {
   }
   return mainWindow;
 };
+
+(async () => {
+  await app.whenReady();
+  await create_main_window();
+
+  // // https://stackoverflow.com/questions/67146654/how-to-compile-python-electron-js-into-desktop-app-exe
+  // const pythonExePath = path.join(__dirname, "python-backend-exe");
+  // var python = require("child_process").execFile(pythonExePath);
+  // console.log("start python");
+
+  // const pythonExePath = path.join(__dirname, "python-backend-exe");
+  // const pythonProcess = spawn(pythonExePath);
+  //
+  // pythonProcess.stdout.on("data", (data) => {
+  //   console.log(`stdout: ${data}`);
+  // });
+  //
+  // pythonProcess.stderr.on("data", (data) => {
+  //   console.error(`stderr: ${data}`);
+  // });
+  //
+  // pythonProcess.on("close", (code) => {
+  //   console.log(`child process exited with code ${code}`);
+  // });
+})();
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

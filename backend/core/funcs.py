@@ -44,6 +44,11 @@ class Func_CheckpointLoaderSimple(Func):
         model_record = ModelInfoTable.sync_get_model_info_by_hash(checkpoint_hash)
         checkpoint_path = model_record.get('local_path')
         embedding_directories = ModelDirTable.sync_get_model_dirs('embedding')
+
+        print(comfy.model_management.current_loaded_models, comfy.model_management.get_free_memory())
+        comfy.model_management.cleanup_models(force_delete=True)
+        print(comfy.model_management.current_loaded_models, comfy.model_management.get_free_memory())
+
         out = comfy.sd.load_checkpoint_guess_config(
             checkpoint_path,
             output_vae=True,

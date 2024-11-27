@@ -9,8 +9,8 @@ from starlette.responses import FileResponse
 import core.addons
 from core.widgets import WIDGET_FUNCTION_MAP, list_vaes
 from tiny_db.helpers import sort_model_info
-from tiny_db.prompt import Prompt
-from tiny_db.task import Task
+from data_type.whatsai_prompt import Prompt
+from tiny_db.task import TaskTable
 from tiny_db.card_input_cache import CardCache
 from tiny_db.card_info import CardModelTable
 from tiny_db.input_file import InputFile
@@ -44,16 +44,19 @@ async def local_card_info(card_name: str, use_cache=True):
 
 @router.get('/card/card_inputs_info/{card_name}')
 async def card_inputs_info(card_name: str):
-    card_class = CardModelTable.get_card_class(card_name)
-    if card_class:
+    cache_record = get_card_info_cache(card_name)
+    card_info = cache_record.get('card_info', None)
+
+    if not card_info :
         return {
-            'errorMessage': None,
-            'cardInputInfo': card_class().card_inputs_info
+            'errorMessage': "Card: {} not found in cache.".format(card_name),
+            'cardInputInfo': None
         }
     else:
+        card_inputs_info = card_info_to_prompt(card_info)
         return {
-            'errorMessage': "Card: {} not found.".format(card_name),
-            'cardInputInfo': None
+            'errorMessage': None,
+            'cardInputInfo': card_inputs_info
         }
 
 @router.get('/card/sync_custom_cards')
@@ -128,12 +131,6 @@ async def local_addon_info(addon_name: str):
             'addon_info': None
         }
 
-@router.post('/execution')
-async def execute(prompt: Prompt, client_id: str):
-    TaskQueue.put(prompt, client_id)
-    return 'ok'
-
-
 class GenerationReq(BaseModel):
     card_name: str
     client_id: str
@@ -145,7 +142,6 @@ async def generate(req: GenerationReq):
     card_info_resp = await local_card_info(card_name, use_cache=True)
     card_info = card_info_resp["cardInfo"]
     if not card_info:
-        logger.debug("Empty cardInfo:", req)
         return card_info
     prompt = card_info_to_prompt(card_info)
     TaskQueue.put(prompt, client_id)
@@ -274,34 +270,34 @@ async def add_recently_used(req: MediaAddRequest):
     file = InputFile.add_input_file(file_path=req.local_path, sub_key=req.sub_key)
     return file
 
-@router.get('/test_multi_d')
-def test_multi_d():
-    from misc.pypi_multi_versoins import import_helper, Dependency
-    import tqdm
-    import scipy
-
-    print(tqdm.__version__, scipy.__version__)
-    with import_helper([
-        Dependency(package_name='scipy', version='1.4.0'),
-        Dependency(package_name='tqdm', version='4.50.1'),
-    ]):
-        import tqdm as other_tqdm
-        import scipy as scipy_v
-        print(other_tqdm.__version__,other_tqdm, scipy_v, scipy_v.__version__, )
-
-    print(tqdm.__version__, scipy.__version__)
+# @router.get('/test_multi_d')
+# def test_multi_d():
+#     from misc.pypi_multi_versoins import import_helper, Dependency
+#     import tqdm
+#     import scipy
+#
+#     print(tqdm.__version__, scipy.__version__)
+#     with import_helper([
+#         Dependency(package_name='scipy', version='1.4.0'),
+#         Dependency(package_name='tqdm', version='4.50.1'),
+#     ]):
+#         import tqdm as other_tqdm
+#         import scipy as scipy_v
+#         print(other_tqdm.__version__,other_tqdm, scipy_v, scipy_v.__version__, )
+#
+#     print(tqdm.__version__, scipy.__version__)
 
 
 @router.get('/task/get_tasks')
 async def get_tasks():
-    tasks = await Task.get_tasks(None)
+    tasks = await TaskTable.get_tasks(None)
     return tasks[:30]
 
 @router.get('/task/remove_task')
 async def remove_task(task_id: str):
     if not task_id:
         return False
-    await Task.remove_task(int(task_id))
+    await TaskTable.remove_task(int(task_id))
     return True
 
 @router.get('/utils/is_dir_path_ok')

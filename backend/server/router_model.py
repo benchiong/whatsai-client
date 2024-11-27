@@ -1,7 +1,7 @@
 import threading
 import traceback
 from typing import Optional
-from fastapi import APIRouter
+from fastapi import APIRouter, BackgroundTasks
 
 from data_type.civitai_model_version import CivitaiModelVersion, CivitaiFileToDownload
 from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
@@ -54,7 +54,6 @@ class SyncModelInfosReq(PydanticModel):
     model_type: Optional[str] = None
     force_renew: bool = True
 
-
 @router.post('/sync_model_infos')
 async def sync_model_infos(req: SyncModelInfosReq):
     """ Sync model infos by type, if no model_type, all model infos will sync.
@@ -63,7 +62,15 @@ async def sync_model_infos(req: SyncModelInfosReq):
 
     model_type = req.model_type.lower()
     force_renew = req.force_renew
+    return await _sync_model_infos(model_type, force_renew)
 
+is_syncing = False
+async def _sync_model_infos(model_type, force_renew=False):
+    global is_syncing
+    if is_syncing:
+        return []
+
+    is_syncing = True
     if not model_type:
         model_dir_records = await ModelDirTable.get_all_model_dir_records()
     else:
@@ -86,6 +93,8 @@ async def sync_model_infos(req: SyncModelInfosReq):
             if model_info:
                 model_infos.append(model_info)
 
+    is_syncing = False
+    #todo: add model_info remove logic
     return sort_model_info(model_infos)
 
 
@@ -235,7 +244,7 @@ class OtherUIReq(PydanticModel):
     set_as_default: bool = False
 
 @router.post('/model_dir/add_other_ui_model_paths')
-async def add_other_ui_model_paths_(req: OtherUIReq):
+async def add_other_ui_model_paths_(req: OtherUIReq, background_tasks: BackgroundTasks):
     ui_name = req.ui_name
     ui_dir = req.ui_dir
     set_as_default = req.set_as_default
@@ -250,6 +259,7 @@ async def add_other_ui_model_paths_(req: OtherUIReq):
             'added_paths': None,
             'info': "Only webui and comfyui supported yet."
         }
+    background_tasks.add_task(_sync_model_infos, None, False)
     return {
         'added_paths': added_paths,
         'info': info
@@ -297,7 +307,7 @@ class AddModelDirRequest(PydanticModel):
     set_as_default: bool = False
 
 @router.post('/model_dir/add_model_dir')
-async def add_model_dir(req: AddModelDirRequest):
+async def add_model_dir(req: AddModelDirRequest, background_tasks: BackgroundTasks):
     model_type = req.model_type
     model_dir = req.model_dir
     register_model_type_if_not_exists = req.register_model_type_if_not_exists
@@ -311,6 +321,7 @@ async def add_model_dir(req: AddModelDirRequest):
     )
     if success:
         filled_record = fill_model_dir_record(record)
+        background_tasks.add_task(_sync_model_infos, model_type, False)
 
         return {
             'success': success,
@@ -329,7 +340,7 @@ class RemoveModelDirRequest(PydanticModel):
     model_dir: str
 
 @router.post('/model_dir/remove_model_dir')
-async def remove_model_dir(req: RemoveModelDirRequest):
+async def remove_model_dir(req: RemoveModelDirRequest, background_tasks: BackgroundTasks):
     model_type = req.model_type
     model_dir = req.model_dir
 
@@ -339,7 +350,7 @@ async def remove_model_dir(req: RemoveModelDirRequest):
     )
     if success:
         filled_record = fill_model_dir_record(record)
-
+        background_tasks.add_task(_sync_model_infos, model_type, False)
         return {
             'success': success,
             'error_info': error_info,

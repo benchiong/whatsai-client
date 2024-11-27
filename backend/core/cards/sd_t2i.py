@@ -11,6 +11,7 @@ from core.comps import (
     Comp_CLIPSetLastLayer,
 )
 from core.funcs import Func_VAEDecode, Func_SaveImage
+from misc.logger import logger
 
 
 class SDT2ICard(Card):
@@ -77,6 +78,7 @@ class SDT2ICard(Card):
             valid_func_inputs: bool = False,
             progress_callback: Callable = None
             ):
+
         addon_vae = self.addons.get('Vae')
         addon_lora = self.addons.get('LoRA')
         addon_hypernet = self.addons.get('Hypernet')
@@ -86,9 +88,15 @@ class SDT2ICard(Card):
 
         with torch.inference_mode():
             checkpoint_info = base_inputs.get('checkpoint')
+
+            logger.debug('checkpoint_info: {}'.format(checkpoint_info))
+
             model, clip, vae = self.load_checkpoint(
                 checkpoint_hash=checkpoint_info.get('sha_256')
             )
+
+            logger.debug('model: {} clip {}, vae:'.format(model, clip, vae))
+
             if addon_vae and addon_inputs.get('Vae'):
                 vae = addon_vae()
 

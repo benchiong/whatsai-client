@@ -4,7 +4,6 @@ from tiny_db.model_type import ModelTypeTable
 
 
 async def initialize_dbs():
-    print('initialize_dbs')
     await ModelTypeTable.init()
     await ModelDirTable.init()
     await CardModelTable.init()
