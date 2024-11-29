@@ -1,6 +1,8 @@
 # whatsai-client
 A very easy to use AIGC UI client fully base on ComfyUI.
-<img src="https://github.com/benchiong/whatsai-client/blob/main/images/whasai-cover.jpg">
+
+![My_cat](https://github.com/user-attachments/assets/31918a9d-d575-40c5-a2f9-0ac81e47db42)
+
 
 https://github.com/user-attachments/assets/7ab17f4a-872e-4fac-bcff-228cf07910a5
 
