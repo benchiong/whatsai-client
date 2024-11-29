@@ -2,8 +2,7 @@
 A very easy to use AIGC UI client fully base on ComfyUI.
 
 The chief meow officer of coding
-![The chief meow officer of coding. ](https://github.com/user-attachments/assets/f1d34536-33e4-4970-83db-6ac8ededd230  width="400" height="400")
-
+<img src="https://github.com/user-attachments/assets/f1d34536-33e4-4970-83db-6ac8ededd230" alt="Image description" width="300" height="300" >
 
 https://github.com/user-attachments/assets/7ab17f4a-872e-4fac-bcff-228cf07910a5
 
