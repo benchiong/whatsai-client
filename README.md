@@ -1,7 +1,8 @@
 # whatsai-client
 A very easy to use AIGC UI client fully base on ComfyUI.
 
-![My_cat](https://github.com/user-attachments/assets/31918a9d-d575-40c5-a2f9-0ac81e47db42)
+The chief meow officer of coding
+![The chief meow officer of coding. ](https://github.com/user-attachments/assets/f1d34536-33e4-4970-83db-6ac8ededd230  width="400" height="400")
 
 
 https://github.com/user-attachments/assets/7ab17f4a-872e-4fac-bcff-228cf07910a5
