@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 
 import socketio
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from starlette.middleware.cors import CORSMiddleware
 
 from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
+from misc.logger import logger
 from tiny_db.init import initialize_dbs
 from tiny_db.model_downloading_info import ModelDownloadInfoTable
 from .sockets import sio
@@ -27,6 +28,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.logger = logger
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    response = await call_next(request)
+    logger.info(f'Request url: {request.url}, Request-Method: {request.method}, Response-Status-Code:{response.status_code}')
+    return response
+
 
 app.include_router(router)
 app.include_router(model_path_router, prefix='/model')

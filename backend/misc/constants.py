@@ -1,7 +1,4 @@
 
-log_sink_to_file = False
-""" loguru sink config, setting True will save logs into file. """
-
 supported_pt_extensions: set[str] = {'.ckpt', '.pt', '.bin', '.pth', '.safetensors', '.pkl', '.sft'}
 """ Model file extension whatsai supported, same as ComfyUI. """
 

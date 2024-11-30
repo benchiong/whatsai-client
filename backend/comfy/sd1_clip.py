@@ -10,6 +10,7 @@ import comfy.clip_model
 import json
 import logging
 import numbers
+from comfy.whatsai_dirs import base_dir
 
 def gen_empty_tokens(special_tokens, length):
     start_token = special_tokens.get("start", None)
@@ -89,7 +90,8 @@ class SDClipModel(torch.nn.Module, ClipTokenWeightEncoder):
         assert layer in self.LAYERS
 
         if textmodel_json_config is None:
-            textmodel_json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd1_clip_config.json")
+            # textmodel_json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd1_clip_config.json")
+            textmodel_json_config = (base_dir / "sd1_clip_config.json").__str__()
 
         with open(textmodel_json_config) as f:
             config = json.load(f)
@@ -405,7 +407,8 @@ def load_embed(embedding_name, embedding_directory, embedding_size, embed_key=No
 class SDTokenizer:
     def __init__(self, tokenizer_path=None, max_length=77, pad_with_end=True, embedding_directory=None, embedding_size=768, embedding_key='clip_l', tokenizer_class=CLIPTokenizer, has_start_token=True, pad_to_max_length=True, min_length=None, pad_token=None, tokenizer_data={}):
         if tokenizer_path is None:
-            tokenizer_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd1_tokenizer")
+            # tokenizer_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sd1_tokenizer")
+            tokenizer_path = (base_dir / 'sd1_tokenizer').__str__()
         self.tokenizer = tokenizer_class.from_pretrained(tokenizer_path)
         self.max_length = max_length
         self.min_length = min_length

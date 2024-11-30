@@ -1,41 +1,11 @@
-<p align="center">
-<img src="https://i.imgur.com/oahHuxG.png">
-<img src="https://i.imgur.com/sZ01Nyl.png">
-</p>
+The frontend with Electron + NextJs, by Nextron
 
-## Usage
+when package:
 
-### Create an App
+1.put the python main.exe to frontend/app/main.exe
 
-```
-# with npx
-$ npx create-nextron-app my-app --example with-chakra-ui
+2.package them all to a whole app.
 
-# with yarn
-$ yarn create nextron-app my-app --example with-chakra-ui
+How to run(package.json with IDE also works well):
 
-# with pnpm
-$ pnpm dlx create-nextron-app my-app --example with-chakra-ui
-```
-
-### Install Dependencies
-
-```
-$ cd my-app
-
-# using yarn or npm
-$ yarn (or `npm install`)
-
-# using pnpm
-$ pnpm install --shamefully-hoist
-```
-
-### Use it
-
-```
-# development mode
-$ yarn dev (or `npm run dev` or `pnpm run dev`)
-
-# production build
-$ yarn build (or `npm run build` or `pnpm run build`)
-```
+nextron --renderer-port 6791

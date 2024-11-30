@@ -7,7 +7,7 @@ from typing import cast
 
 from loguru import logger as loguru_logger
 
-from misc.constants import log_sink_to_file
+from misc.options import log_sink_to_file
 from misc.whatsai_dirs import base_dir
 
 log_dir = base_dir / 'log'
@@ -49,16 +49,17 @@ class Logger:
 
     @classmethod
     def init_config(cls):
-        LOGGER_NAMES = ("uvicorn", "uvicorn.asgi", "uvicorn.access")
-
+        logging.basicConfig(handlers=[InterceptHandler()], level=0)
+        LOGGER_NAMES = ("uvicorn", "uvicorn.asgi", "uvicorn.access", "fastapi", "unicorn.error")
         # change handler for default uvicorn logger
         handler = InterceptHandler()
         logging.getLogger().handlers = [handler]
         for logger_name in LOGGER_NAMES:
-            logging_logger = logging.getLogger(logger_name)
-            logging_logger.handlers = [InterceptHandler()]
+            logging.getLogger(logger_name).handlers = [InterceptHandler()]
+            logging.getLogger(logger_name).propagate = False
 
         logging.root.addHandler(handler)
+
 
     def get_logger(self):
         return self.loguru_logger
@@ -68,7 +69,7 @@ class InterceptHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:  # pragma: no cover
         # Get corresponding Loguru level if it exists
         try:
-            level = logger.level(record.levelname).name
+            level = loguru_logger.level(record.levelname).name
         except ValueError:
             level = str(record.levelno)
 
@@ -77,7 +78,7 @@ class InterceptHandler(logging.Handler):
         while frame.f_code.co_filename == logging.__file__:  # noqa: WPS609
             frame = cast(FrameType, frame.f_back)
             depth += 1
-
+        logger = loguru_logger.bind(request_id='app')
         logger.opt(depth=depth, exception=record.exc_info).log(
             level, record.getMessage(),
         )

@@ -102,7 +102,6 @@ class PromptWorker:
         #todo: set other type callbacks here.
         def sd_progress_callback(*args):
             step, total_steps, preview_bytes = args
-            # logger.debug((step, total_steps))
             cls.preview_task(task, info={
                 'step': step,
                 'total_steps': total_steps,
@@ -132,6 +131,7 @@ class PromptWorker:
 
         with TaskQueue.mutex:
             TaskTable.update_task_status(task_id=task.task_id, status=TaskStatus.processing)
+
     @classmethod
     def preview_task(cls, task: TaskTable.DataModel, info: dict):
         cls.send_sync(

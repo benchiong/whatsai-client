@@ -9,6 +9,8 @@ import comfy.model_patcher
 import comfy.model_management
 import comfy.utils
 import comfy.clip_model
+from .whatsai_dirs import base_dir
+
 
 class Output:
     def __getitem__(self, key):
@@ -90,14 +92,21 @@ def load_clipvision_from_sd(sd, prefix="", convert_keys=False):
     if convert_keys:
         sd = convert_to_transformers(sd, prefix)
     if "vision_model.encoder.layers.47.layer_norm1.weight" in sd:
-        json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_g.json")
+        # json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_g.json")
+        json_config = (base_dir / "clip_vision_config_g.json").__str__()
+
     elif "vision_model.encoder.layers.30.layer_norm1.weight" in sd:
-        json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_h.json")
+        # json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_h.json")
+        json_config = (base_dir / "clip_vision_config_h.json").__str__()
     elif "vision_model.encoder.layers.22.layer_norm1.weight" in sd:
         if sd["vision_model.embeddings.position_embedding.weight"].shape[0] == 577:
-            json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_vitl_336.json")
+            # json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_vitl_336.json")
+            json_config = (base_dir / "clip_vision_config_vitl_336.json").__str__()
+
         else:
-            json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_vitl.json")
+            # json_config = os.path.join(os.path.dirname(os.path.realpath(__file__)), "clip_vision_config_vitl.json")
+            json_config = (base_dir / "clip_vision_config_vitl.json").__str__()
+
     else:
         return None
 
