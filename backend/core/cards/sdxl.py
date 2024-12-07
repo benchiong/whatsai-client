@@ -17,16 +17,25 @@ from core.funcs import (
 
 
 class SDXLCard(Card):
-    name = "SDXL-With-Refiner"
-    display_name = "SDXL With Refiner"
 
     meta_data = {
-        'name': name,
+        'name': "SDXL-With-Refiner",
+        'display_name': "SDXL With Refiner",
         'describe': "SDXL With Refiner",
 
-        # https://civitai.com/models/101055
-        # https://civitai.com/models/101055?modelVersionId=126613
-        "pre_models": ["31e35c80fc4829d14f90153f4c74cd59c90b779f6afe05a74cd6120b893f7e5b"],
+        "pre_models": [
+            {
+                # SDXL 1.0 VAE fix
+                # https://civitai.com/models/101055?modelVersionId=128078
+                "hash": "E6BB9EA85BBF7BF6478A7C6D18B71246F22E95D41BCDD80ED40AA212C33CFEFF"
+            },
+            {
+                # refiner
+                # https://civitai.com/models/101055?modelVersionId=126613
+                "hash": "7440042BBDC8A24813002C09B6B69B64DC90FDED4472613437B7F55F9B7D9C5F"
+            },
+        ],
+
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/2410801d-f9a2-46f9-b5f0-17eefe008950/width=450/SDXL1Refiner.jpeg"
     }
 
@@ -184,7 +193,7 @@ class SDXLCard(Card):
 
             result = self.save_image(
                 images=pixel_samples,
-                card_info=self.card_inputs_info,
+                card_name=self.card_inputs_info.get('card_name'),
                 inputs_info=base_inputs,
                 addon_inputs_info=addon_inputs
             )

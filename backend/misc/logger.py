@@ -7,7 +7,7 @@ from typing import cast
 
 from loguru import logger as loguru_logger
 
-from misc.options import log_sink_to_file
+from misc.arg_parser import log_sink_to_file
 from misc.whatsai_dirs import base_dir
 
 log_dir = base_dir / 'log'

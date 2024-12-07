@@ -11,18 +11,20 @@ from core.comps import (
     Comp_CLIPSetLastLayer,
 )
 from core.funcs import Func_VAEDecode, Func_SaveImage
-from misc.logger import logger
 
 
 class SDT2ICard(Card):
-    name = "Stable-Diffusion-Text-to-Image"
-    display_name = "Stable Diffusion Text-to-Image"
 
     meta_data = {
-        'name': name,
+        'name': "Stable-Diffusion-Text-to-Image",
+        'display_name': "Stable Diffusion Text-to-Image",
         'describe': "Text-to-Image with Stable diffusion.",
-        # https://civitai.com/models/62437
-        "pre_models": ["6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa"],
+        "pre_models": [
+            {
+                # https://civitai.com/models/62437
+                "hash": "6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa"
+            }
+        ],
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0efc4253-57cc-444d-a501-2bfd0cf86697/width=450/00000-2585056719.jpeg"
     }
 
@@ -89,13 +91,9 @@ class SDT2ICard(Card):
         with torch.inference_mode():
             checkpoint_info = base_inputs.get('checkpoint')
 
-            logger.debug('checkpoint_info: {}'.format(checkpoint_info))
-
             model, clip, vae = self.load_checkpoint(
                 checkpoint_hash=checkpoint_info.get('sha_256')
             )
-
-            logger.debug('model: {} clip {}, vae:'.format(model, clip, vae))
 
             if addon_vae and addon_inputs.get('Vae'):
                 vae = addon_vae()
@@ -143,7 +141,7 @@ class SDT2ICard(Card):
 
             result = self.save_image(
                 images=pixel_samples,
-                card_info=self.card_inputs_info,
+                card_name=self.name,
                 inputs_info=base_inputs,
                 addon_inputs_info=addon_inputs
             )

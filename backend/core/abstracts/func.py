@@ -28,6 +28,7 @@ class Func(ABC):
         pass
 
     def __call__(self, *args, **kwargs):
+        # todo: change to weak refs
         if self.cache_out and self._inputs_unchanged(*args, **kwargs):
             return self.last_out
 

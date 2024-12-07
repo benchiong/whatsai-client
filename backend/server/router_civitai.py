@@ -23,7 +23,7 @@ async def get_model_version_by_model_id(model_id: int, return_model_version=Fals
     return await get_civitai_model_info_by_model_id(model_id, return_model_version)
 
 @router.get("/get_civitai_model_version_info_with_url/")
-async def get_civitai_model_version_info_with_url(url_str, use_cache):
+async def get_civitai_model_version_info_with_url(url_str, use_cache=True):
     use_cache = False if (use_cache == 'false' or use_cache == False or use_cache == 0) else True
     if not url_str:
         return {

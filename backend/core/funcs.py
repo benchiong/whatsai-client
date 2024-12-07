@@ -20,9 +20,10 @@ import comfy.model_patcher
 import comfy.controlnet
 from comfy.taesd.taesd import TAESD
 from core.abstracts import Func
-from tiny_db.artwork import ArtworkTable
-from tiny_db.model_dir import ModelDirTable
-from tiny_db.model_info import ModelInfoTable
+from data_type.whatsai_card import Prompt
+from data_type.whatsai_artwork import Artwork
+from data_type.whatsai_model_dir import ModelDir
+from data_type.whatsai_model_info import ModelInfo
 from core.extras import tae_model_info_list
 from misc.helpers import pillow
 from misc.logger import logger
@@ -41,9 +42,9 @@ class Func_CheckpointLoaderSimple(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, checkpoint_hash):
-        model_record = ModelInfoTable.sync_get_model_info_by_hash(checkpoint_hash)
-        checkpoint_path = model_record.get('local_path')
-        embedding_directories = ModelDirTable.sync_get_model_dirs('embedding')
+        model_info = ModelInfo.get(checkpoint_hash)
+        checkpoint_path = model_info.local_path
+        embedding_directories = ModelDir.get_dirs('embedding')
 
         out = comfy.sd.load_checkpoint_guess_config(
             checkpoint_path,
@@ -192,14 +193,14 @@ class Latent2RGBPreviewer(LatentPreviewer):
 def get_previewer(preview_method, device, latent_format):
     previewer = None
     if latent_format.taesd_decoder_name is not None and not preview_method == LatentPreviewMethod.Latent2RGB:
-        tae_file_records = ModelInfoTable.sync_get_taesd_file_records()
+        tae_model_infos = ModelInfo.get_taesd_model_infos()
         tae_file_record = None
-        for f in tae_file_records:
-            if f.get('file_name').startswith(latent_format.taesd_decoder_name):
-                tae_file_record = f
+        for tae_model_file in tae_model_infos:
+            if tae_model_file.file_name.startswith(latent_format.taesd_decoder_name):
+                tae_file_record = tae_model_file
                 break
         if tae_file_record:
-            tae_file_path = tae_file_record.get('local_path')
+            tae_file_path = tae_file_record.local_path
             taesd = TAESD(None, tae_file_path, latent_channels=latent_format.latent_channels).to(device)
             previewer = TAESDPreviewerImpl(taesd)
     else:
@@ -308,40 +309,38 @@ class Func_SaveImage(Func):
 
     def run(self,
             images: Tensor,
-            card_info: dict | None = None,
+            card_name: str,
             inputs_info: dict | None = None,
             addon_inputs_info: dict | None = None,
             meta_info: dict | None = None
             ):
         results = list()
+        assert card_name
 
         for (batch_number, image) in enumerate(images):
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             metadata = PngInfo()
-            metadata.add_text("card_info", json.dumps(card_info))
-            metadata.add_text("inputs_info", json.dumps(inputs_info))
-            metadata.add_text("addon_inputs_info", json.dumps(addon_inputs_info))
+            prompt = Prompt(card_name=card_name, base_inputs=inputs_info, addon_inputs=addon_inputs_info)
+            metadata.add_text("prompt", json.dumps(prompt.model_dump()))
 
-            filename = ArtworkTable.get_file_name(media_type='image')
-            img.save(filename, pnginfo=metadata, compress_level=self.compress_level)
+            file_path = Artwork.create_file_path(media_type='image')
+            img.save(file_path, pnginfo=metadata, compress_level=self.compress_level)
 
-            art_meta_info = {
+            meta_info = {
                 'width': inputs_info.get('width') if inputs_info else None,
                 'height': inputs_info.get('height') if inputs_info else None
             } if not meta_info else meta_info
 
-            art = ArtworkTable.add_art(
-                card_name=card_info.get('card_name') if card_info else None,
-                file_path=filename,
+            artwork = Artwork.add_art_work(
+                file_path=file_path,
+                card_name=card_name,
                 media_type='image',
-                meta_info=art_meta_info,
-                # card_info=card_info,
-                inputs_info=inputs_info,
-                addon_inputs_info=addon_inputs_info
+                meta_info=meta_info,
+                prompt=prompt,
             )
-            results.append(art)
+            results.append(artwork)
 
         return {"images": results}
 
@@ -370,7 +369,7 @@ class Func_LoraLoader(Func):
         if strength_model == 0 and strength_clip == 0:
             return model, clip
 
-        lora_path = ModelInfoTable.sync_get_model_info_by_hash(lora_hash).get("local_path")
+        lora_path = ModelInfo.get(lora_hash).local_path
         lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
 
         model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
@@ -381,8 +380,7 @@ class Func_UpscaleModelLoader(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, model_hash: str):
-        model_record = ModelInfoTable.sync_get_model_info_by_hash(model_hash)
-        model_path = model_record.get('local_path')
+        model_path = ModelInfo.get(model_hash).local_path
 
         sd = comfy.utils.load_torch_file(model_path, safe_load=True)
         if "module.layers.0.residual_group.blocks.0.norm1.weight" in sd:
@@ -524,8 +522,7 @@ class Func_HypernetLoader(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, model, hypernet_hash, strength):
-        hypernet_record = ModelInfoTable.sync_get_model_info_by_hash(hypernet_hash)
-        hypernet_path = hypernet_record.get('local_path')
+        hypernet_path = ModelInfo.get(hypernet_hash).local_path
         model_hypernet = model.clone()
         patch = self.load_hypernetwork_patch(hypernet_path, strength)
         if patch is not None:
@@ -716,7 +713,7 @@ class Func_ControlNetLoader(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, controlnet_hash):
-        controlnet_path = ModelInfoTable.sync_get_model_info_by_hash(controlnet_hash).get('local_path')
+        controlnet_path = ModelInfo.get(controlnet_hash).local_path
         controlnet = comfy.controlnet.load_controlnet(controlnet_path)
         return controlnet
 
@@ -746,8 +743,8 @@ class Func_ClipLoader(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, clip_hash, type="stable_diffusion"):
-        clip_path = ModelInfoTable.sync_get_model_info_by_hash(clip_hash).get('local_path')
-        embedding_directories = ModelDirTable.sync_get_model_dirs('embedding')
+        clip_path = ModelInfo.get(clip_hash).local_path
+        embedding_directories = ModelDir.get_dirs('embedding')
 
         if type == "stable_cascade":
             clip_type = comfy.sd.CLIPType.STABLE_CASCADE
@@ -768,9 +765,9 @@ class Func_DualCLIPLoader(Func):
 
     def run(self, clip_hash1, clip_hash2, type):
 
-        clip_path1 = ModelInfoTable.sync_get_model_info_by_hash(clip_hash1).get('local_path')
-        clip_path2 = ModelInfoTable.sync_get_model_info_by_hash(clip_hash2).get('local_path')
-        embedding_directories = ModelDirTable.sync_get_model_dirs('embedding')
+        clip_path1 = ModelInfo.get(clip_hash1).local_path
+        clip_path2 = ModelInfo.get(clip_hash2).local_path
+        embedding_directories = ModelDir.get_dirs('embedding')
 
         if type == "sdxl":
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
@@ -788,10 +785,10 @@ class Func_TripleCLIPLoader(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, clip_hash1, clip_hash2, clip_hash3):
-        clip_path1 = ModelInfoTable.sync_get_model_info_by_hash(clip_hash1).get('local_path')
-        clip_path2 = ModelInfoTable.sync_get_model_info_by_hash(clip_hash2).get('local_path')
-        clip_path3 = ModelInfoTable.sync_get_model_info_by_hash(clip_hash3).get('local_path')
-        embedding_directories = ModelDirTable.sync_get_model_dirs('embedding')
+        clip_path1 = ModelInfo.get(clip_hash1).local_path
+        clip_path2 = ModelInfo.get(clip_hash2).local_path
+        clip_path3 = ModelInfo.get(clip_hash3).local_path
+        embedding_directories = ModelDir.get_dirs('embedding')
 
         clip = comfy.sd.load_clip(ckpt_paths=[clip_path1, clip_path2, clip_path3], embedding_directory=embedding_directories)
         return clip
@@ -801,8 +798,7 @@ class Func_UNETLoader(Func):
         super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
     def run(self, unet_hash, weight_dtype):
-        unet_path = ModelInfoTable.sync_get_model_info_by_hash(unet_hash).get('local_path')
-
+        unet_path = ModelInfo.get(unet_hash).local_path
         model_options = {}
         if weight_dtype == "fp8_e4m3fn":
             model_options["dtype"] = torch.float8_e4m3fn

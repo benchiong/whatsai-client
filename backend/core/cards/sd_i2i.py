@@ -14,15 +14,19 @@ from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SDI2ICard(Card):
-    name = "Stable-Diffusion-Image-to-Image"
-    display_name = "Stable Diffusion Image-to-Image"
 
     meta_data = {
-        'name': name,
+        'name': "Stable-Diffusion-Image-to-Image",
+        'display_name': "Stable Diffusion Image-to-Image",
         'describe': "Image-to-Image with Stable diffusion.",
 
-        # https://civitai.com/models/62437
-        "pre_models": ["6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa"],
+        "pre_models": [
+            {
+                # https://civitai.com/models/62437
+                "hash": "6ce0161689b3853acaa03779ec93eafe75a02f4ced659bee03f50797806fa2fa"
+            }
+        ],
+
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/8bd7f924-f4e6-4341-ad93-057978a49dc0/width=450/41046223.jpeg"
     }
 
@@ -143,7 +147,7 @@ class SDI2ICard(Card):
 
             result = self.save_image(
                 images=pixel_samples,
-                card_info=self.card_inputs_info,
+                card_name=self.card_inputs_info.get('card_name'),
                 inputs_info=base_inputs,
                 addon_inputs_info=addon_inputs
             )

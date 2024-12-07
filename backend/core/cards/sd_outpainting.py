@@ -14,14 +14,19 @@ from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SDOutpaintingCard(Card):
-    name = "Stable-Diffusion-Outpainting"
-    display_name = "Stable Diffusion Outpainting"
 
     meta_data = {
-        'name': name,
+        'name': "Stable-Diffusion-Outpainting",
+        'display_name': "Stable Diffusion Outpainting",
         'describe': "Outpainting with Stable diffusion.",
-        # https://civitai.com/models/117263/sd15-inpainting
-        "pre_models": ["C6BBC15E3224E6973459BA78DE4998B80B50112B0AE5B5C67113D56B4E366B19"],
+
+        "pre_models": [
+            {
+                # https://civitai.com/models/117263/sd15-inpainting
+                "hash": "C6BBC15E3224E6973459BA78DE4998B80B50112B0AE5B5C67113D56B4E366B19"
+            }
+        ],
+
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/31d00daf-9575-4195-bdb0-69130abe6f7b/width=450/20257461.jpeg"
     }
 
@@ -145,7 +150,7 @@ class SDOutpaintingCard(Card):
 
             result = self.save_image(
                 images=pixel_samples,
-                card_info=self.card_inputs_info,
+                card_name=self.card_inputs_info.get('card_name'),
                 inputs_info=base_inputs,
                 addon_inputs_info=addon_inputs
             )

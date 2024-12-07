@@ -137,7 +137,7 @@ class Addon_HiresFix(Addon):
 
         result = self.func_save_image(
             images=images,
-            card_info=card_info,
+            card_name=card_info.get('card_name'),
             inputs_info=inputs_info,
             addon_inputs_info=addon_inputs_info,
             meta_info=meta_info

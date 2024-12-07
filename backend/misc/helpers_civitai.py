@@ -8,20 +8,20 @@ from urllib.parse import urlparse, parse_qs
 import requests
 import urllib3
 
+from data_type.whatsai_model_download_task import ModelDownloadTask, TaskStatus
+
 #  https://python-forum.io/thread-36981.html
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from data_type.civitai_model_version import CivitaiFileToDownload, CivitaiModelVersion
 from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
-from data_type.whatsai_model_info import ModelInfo
 from misc.helpers import async_get, gen_file_sha256, async_head, download_image, \
-    get_file_created_timestamp_and_datetime, get_file_size_in_kb
+    get_file_created_timestamp_and_datetime, get_file_size_in_kb, sync_get, sync_head, sync_download_image
 from misc.json_cache import JsonCache
 from misc.logger import logger
 from misc.whatsai_dirs import model_info_images_dir
-from tiny_db.model_dir import ModelDirTable
-from tiny_db.model_downloading_info import ModelDownloadInfoTable
-from tiny_db.model_info import ModelInfoTable
+from data_type.whatsai_model_dir import ModelDir
+from data_type.whatsai_model_info import ModelInfo
 
 # Mostly from: https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper, thanks.
 
@@ -55,7 +55,7 @@ async def get_civitai_model_info_by_hash(hash_str: str):
             return cached_result, None
 
         resp = await async_get(url, headers=def_headers_to_request_civitai)
-        if not resp:
+        if resp is None:
             return None, "get_civitai_model_info_by_hash async_get error, hash: {}".format(hash_str)
 
         if resp.status_code == 404:
@@ -68,6 +68,32 @@ async def get_civitai_model_info_by_hash(hash_str: str):
         logger.debug("get_civitai_model_info_by_hash error:", e)
         traceback.print_exc()
         return None, str(e)
+
+def sync_get_civitai_model_info_by_hash(hash_str: str):
+    if not hash_str:
+        return False, None, "Hash_str is required."
+
+    url = civitai_url_dict["hash"] + hash_str
+    try:
+        cached_result = JsonCache.get("get_civitai_model_info_by_hash", hash_str)
+        if cached_result:
+            return True, cached_result, None
+
+        resp = sync_get(url, headers=def_headers_to_request_civitai)
+
+        if resp is None:
+            return False, None, "get_civitai_model_info_by_hash error, hash: {}".format(hash_str)
+
+        if resp.status_code == 404:
+            return True, None, "Model version info not found on civitai, the hash_str id: {}".format(hash_str)
+
+        resp_content = resp.json()
+        JsonCache.add("get_civitai_model_info_by_hash", hash_str, resp_content)
+        return True, resp_content, None
+    except Exception as e:
+        logger.debug("get_civitai_model_info_by_hash error:", e)
+        traceback.print_exc()
+        return False, None, str(e)
 
 
 async def get_civitai_model_info_by_model_id(model_id: int, return_model_version=False):
@@ -143,6 +169,23 @@ async def is_content_type_image(url):
 
     return content_type and 'image' in content_type
 
+def sync_is_content_type_image(url):
+    cached_result = JsonCache.get('is_content_type_image', url)
+    if not cached_result:
+        resp = sync_head(url, headers=def_headers_to_request_civitai)
+        if not resp:
+            return False
+
+        content_type = None
+        if resp.headers and resp.headers.get('content-type'):
+            content_type = resp.headers.get('content-type')
+
+        JsonCache.add('is_content_type_image', url, content_type)
+    else:
+        content_type = cached_result
+
+    return content_type and 'image' in content_type
+
 
 async def get_real_image_info(image_infos: list[dict]):
     """ Image urls return by civitai sometime are videos with extension: .jpeg
@@ -167,12 +210,41 @@ async def get_real_image_info(image_infos: list[dict]):
     return first_img_info
 
 
+def sync_get_real_image_info(image_infos: list[dict]):
+    """ sync version of get_real_image_info """
+
+    first_img_info = None
+    for index, image_info in enumerate(image_infos):
+        url = image_info.get('url')
+        if index == 0 and url:
+            first_img_info = first_img_info
+        try:
+            is_image = sync_is_content_type_image(url)
+            if is_image:
+                return image_info
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(e)
+            continue
+    return first_img_info
+
 async def get_image_url_of_civitai_model_info(civitai_model_info: dict):
     image_infos = civitai_model_info.get('images')
     if not image_infos:
         return None
 
     image_info = await get_real_image_info(image_infos)
+    if not image_info:
+        return None
+
+    return image_info.get('url')
+
+def sync_get_image_url_of_civitai_model_info(civitai_model_info: dict):
+    image_infos = civitai_model_info.get('images')
+    if not image_infos:
+        return None
+
+    image_info = sync_get_real_image_info(image_infos)
     if not image_info:
         return None
 
@@ -188,6 +260,19 @@ async def try_to_make_sure_first_image_is_real_image(civit_model_version_info: d
         return
 
     image_info_with_maybe_real_image = await get_real_image_info(images)
+
+    images[0] = image_info_with_maybe_real_image
+    civit_model_version_info['images'] = images
+
+def sync_try_to_make_sure_first_image_is_real_image(civit_model_version_info: dict | None):
+    if not civit_model_version_info:
+        return
+
+    images = civit_model_version_info.get('images', [])
+    if not images:
+        return
+
+    image_info_with_maybe_real_image = get_real_image_info(images)
 
     images[0] = image_info_with_maybe_real_image
     civit_model_version_info['images'] = images
@@ -235,7 +320,7 @@ def parse_civitai_url(url: str) -> (int, int):
     return model_id, model_version_id
 
 
-async def file_to_download_2_model_download_info(
+def file_to_download_2_model_download_info(
         file_to_download: CivitaiFileToDownload,
         model_version: CivitaiModelVersion,
         downloaded_image_path: str
@@ -247,11 +332,11 @@ async def file_to_download_2_model_download_info(
     size_kb = file_to_download.civitaiFile.sizeKB
     civit_model = model_version
 
-    dir_record = await ModelDirTable.get_single_model_dir_record(model_type)
-    if not dir_record:
+    dir_obj = ModelDir.get(model_type)
+    if not dir_obj:
         return None, "Dir record not found."
 
-    dir_path = dir_record.get('default_dir', None)
+    dir_path = dir_obj.default_dir
     if not dir_path:
         return None, "Dir to download not found."
 
@@ -259,13 +344,18 @@ async def file_to_download_2_model_download_info(
     download_url = file_to_download.civitaiFile.downloadUrl
 
     model_info = ModelInfo(
-        local_path=local_path.__str__(),
+        local_path=str(local_path),
         file_name=file_name,
         sha_256=sha_256,
         model_type=model_type,
         image_path=downloaded_image_path,
+        civit_model_version_id=civit_model.id,
         civit_model=civit_model,
-        size_kb=size_kb
+        size_kb=size_kb,
+        dir=str(local_path.parent),
+        base_model=civit_model.baseModel,
+        civit_info_synced=True,
+        download_url=download_url
     )
 
     model_downloading_info = ModelDownloadingInfo(
@@ -279,49 +369,43 @@ async def file_to_download_2_model_download_info(
 
     return model_downloading_info, None
 
-def whatsai_model_downloading_info():
-    pass
-
 def download_civitai_model_task(download_model_info: ModelDownloadingInfo):
     while True:
         try:
             local_model_path = download_civitai_model_worker(download_model_info)
             if local_model_path:
-                print("model downloaded:", local_model_path)
+                logger.debug(f"model downloaded: {local_model_path}")
+                download_model_info.finished = True
+                download_model_info.save()
                 return
         except Exception as e:
             traceback.print_exc()
             logger.debug(e)
 
-def download_civitai_model_worker(download_model_info: ModelDownloadingInfo):
+def download_civitai_model_worker(model_downloading_info: ModelDownloadingInfo, task: ModelDownloadTask):
     """ Mostly from:
     https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper/blob/main/scripts/ch_lib/downloader.py#L14
     thanks.
     """
 
-    local_path = download_model_info.model_info.local_path
-    if Path(local_path).exists():
-        return
-
-    _ = ModelDownloadInfoTable.add_record(download_model_info)
-
-    downloading_path = local_path + '.downloading'
-    url_to_download = download_model_info.url
-
-    downloaded_size = 0
-
-    origin_download_model_info = ModelDownloadInfoTable.get_record(url_to_download)
+    local_path = model_downloading_info.model_info.local_path
+    downloading_path = model_downloading_info.downloading_file()
+    url_to_download = model_downloading_info.url
 
     # we have unfinished task
     if os.path.exists(downloading_path):
         downloaded_size = os.path.getsize(downloading_path)
-        if origin_download_model_info:
-            download_model_info = ModelDownloadingInfo(**origin_download_model_info)
 
-    # make sure it is not already downloaded.
+        # if we have download record in db, they have same local_path, recover its download progress info,
+        # Add a new record otherwise.
+        origin_download_model_info = ModelDownloadingInfo.get(url_to_download)
+        if origin_download_model_info and origin_download_model_info.model_info.local_path == local_path:
+            model_downloading_info = origin_download_model_info
+        else:
+            model_downloading_info.save()
     else:
-        if origin_download_model_info and origin_download_model_info.get('finished'):
-            return
+        model_downloading_info.save()
+        downloaded_size = 0
 
     # create header range
     headers = {
@@ -329,11 +413,9 @@ def download_civitai_model_worker(download_model_info: ModelDownloadingInfo):
         'Range': 'bytes=%d-' % downloaded_size,
     }
 
-    # print(local_path, downloading_path, url_to_download, downloaded_size, headers)
-
     # download process
     time_start = time.time()  # record begin time before request
-    origin_downloaded_time = download_model_info.downloaded_time  # record last download consumed time
+    consumed_downloaded_time = model_downloading_info.downloaded_time  # record last download consumed time
 
     resp = requests.get(url_to_download, stream=True, verify=False, headers=headers)
     with open(downloading_path, "ab") as f:
@@ -348,19 +430,25 @@ def download_civitai_model_worker(download_model_info: ModelDownloadingInfo):
 
             # update record to tell frontend
             if tmp_downloaded_size > size_to_update:
-                tmp_downloaded_size = 0
                 update_downloading_record(
-                    download_model_info,
-                    origin_downloaded_time,
+                    model_downloading_info,
+                    consumed_downloaded_time,
                     time_start,
-                    downloaded_size / 1024
+                    downloaded_size / 1024,
+                    task
                 )
+                tmp_downloaded_size = 0
+
+            task_canceled = ModelDownloadTask.get(task.id).task_status == TaskStatus.canceled.value
+            if task_canceled:
+                logger.debug(f"task canceled {task.id}")
+                return False, None
 
     # finish downloading
     os.rename(downloading_path, local_path)
 
-    # add model info
-    model_info = download_model_info.model_info
+    # update model info and save
+    model_info = model_downloading_info.model_info
 
     time_stamp, datetime_str = get_file_created_timestamp_and_datetime(model_info.local_path)
     size_kb = get_file_size_in_kb(model_info.local_path)
@@ -368,22 +456,23 @@ def download_civitai_model_worker(download_model_info: ModelDownloadingInfo):
     model_info.size_kb = size_kb
     model_info.created_time_stamp = time_stamp
     model_info.created_datetime_str = datetime_str
-    ModelInfoTable.sync_add_model_info(model_info)
+    model_info.save()
 
     # update model download info
-    download_model_info.finished = True
-    download_model_info.eta = 0.0
-    download_model_info.progress = 1.0
-    download_model_info.downloaded_size = size_kb
-    ModelDownloadInfoTable.update_record(download_model_info)
+    model_downloading_info.finished = True
+    model_downloading_info.eta = 0.0
+    model_downloading_info.progress = 1.0
+    model_downloading_info.downloaded_size = size_kb
+    model_downloading_info.save()
 
-    return download_model_info
+    return True, local_path
 
 def update_downloading_record(
         download_model_info: ModelDownloadingInfo,
         origin_downloaded_time: float,
         time_start: float,
         downloaded_size: float,
+        task: ModelDownloadTask
 ):
     total_size = download_model_info.total_size
 
@@ -406,10 +495,10 @@ def update_downloading_record(
     eta = downloaded_time / (progress + const_num) - downloaded_time
     download_model_info.eta = eta
 
-    # print("update_downloading_record:", download_model_info.model_info.file_name, total_size, downloaded_size, downloaded_time, eta, progress)
-
     # update the record
-    ModelDownloadInfoTable.update_record(download_model_info)
+    task.workload = download_model_info
+    download_model_info.save()
+    task.save()
 
 async def download_civitai_image_to_whatsai_file_dir(url: str):
     if not url:
@@ -418,4 +507,14 @@ async def download_civitai_image_to_whatsai_file_dir(url: str):
     file_name = Path(url).name
     local_image_path = model_info_images_dir / file_name
     success = await download_image(url, local_image_path.__str__(), headers=def_headers_to_request_civitai)
+    return local_image_path.__str__() if success else None
+
+
+def sync_download_civitai_image_to_whatsai_file_dir(url: str):
+    if not url:
+        return None
+
+    file_name = Path(url).name
+    local_image_path = model_info_images_dir / file_name
+    success = sync_download_image(url, local_image_path.__str__(), headers=def_headers_to_request_civitai)
     return local_image_path.__str__() if success else None

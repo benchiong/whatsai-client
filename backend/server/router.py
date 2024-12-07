@@ -1,4 +1,3 @@
-import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -6,112 +5,97 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from starlette.responses import FileResponse
 
-import core.addons
 from core.widgets import WIDGET_FUNCTION_MAP, list_vaes
-from tiny_db.helpers import sort_model_info
-from data_type.whatsai_prompt import Prompt
-from tiny_db.task import TaskTable
-from tiny_db.card_input_cache import CardCache
-from tiny_db.card_info import CardModelTable
-from tiny_db.input_file import InputFile
-from tiny_db.artwork import ArtworkTable
-from tiny_db.media_file import MediaFile
-from tiny_db.model_info import ModelInfoTable
+from data_type.whatsai_card import CardDataModel, download_cover_image, CardInfo
+from data_type.helpers import sort_model_info
+from data_type.whatsai_task import Task
+from data_type.whatsai_input_file import InputFile
+from data_type.whatsai_artwork import Artwork
 from misc.helpers import file_type_guess
 from misc.logger import logger
-from misc.prompt_worker import TaskQueue
+from prompt_worker import TaskQueue
 
 router = APIRouter()
 
 @router.get('/card/local_card_info/{card_name}')
 async def local_card_info(card_name: str, use_cache=True):
-    cache_record = get_card_info_cache(card_name)
+    # fill_default_card_infos when server starts, make sure it's done before info got.
+    try:
+        CardDataModel.fill_default_card_infos()
+    except Exception as e:
+        pass
 
-    if use_cache and cache_record:
-        card_info = cache_record.get('card_info', None)
-    else:
-        card_class = CardModelTable.get_card_class(card_name)
-        if not card_class:
-            return {
-                'errorMessage': "Card: {} not found.".format(card_name),
-                'cardInfo': None
-            }
-        card_info = card_class().card_info
+    card_record = CardDataModel.get(card_name)
+    if not card_record:
+        return {
+            'errorMessage': "Card: {} not found.".format(card_name),
+            'cardInfo': None
+        }
+
     return {
         'errorMessage': None,
-        'cardInfo': card_info
+        'cardInfo': card_record.get_card_info(use_cache)
     }
 
-@router.get('/card/card_inputs_info/{card_name}')
-async def card_inputs_info(card_name: str):
-    cache_record = get_card_info_cache(card_name)
-    card_info = cache_record.get('card_info', None)
+@router.get('/card/is_card_ready/{card_name}')
+async def is_card_ready(card_name: str):
+    card_record = CardDataModel.get(card_name)
+    return card_record and card_record.is_ready()
 
-    if not card_info :
+@router.get('/card/card_inputs_info/{card_name}')
+async def card_inputs_info(card_name: str, use_cache=True):
+    card_record = CardDataModel.get(card_name)
+
+    if not card_record:
         return {
             'errorMessage': "Card: {} not found in cache.".format(card_name),
             'cardInputInfo': None
         }
     else:
-        card_inputs_info = card_info_to_prompt(card_info)
         return {
             'errorMessage': None,
-            'cardInputInfo': card_inputs_info
+            'cardInputInfo': card_record.get_card_info(use_cache).to_prompt()
         }
 
 @router.get('/card/sync_custom_cards')
 def sync_custom_cards():
-    return CardModelTable.sync_custom_cards()
+    return CardDataModel.sync_custom_cards()
 
-
+class CacheCardPromptRequest(BaseModel):
+    card_name: str
+    card_info: dict | None
 @router.post('/card/cache_card_prompt')
-def cache_card_prompt(req: CardCache.DataModel):
+def cache_card_prompt(req: CacheCardPromptRequest):
     card_info = req.card_info
     card_name = req.card_name
-
-    if not card_info:
-        CardCache.delete(card_name)
+    card_record = CardDataModel.get(card_name)
+    print("card_info:", card_info)
+    if not card_record:
+        return {
+            'errorMessage': "Card: {} not found.".format(card_name),
+            'cardInfo': None
+        }
+    if not card_info:  # clear cache
+        card_record.cached_card_info = None
+        card_record.save()
+        return {
+            'errorMessage': None,
+            'cardInfo': card_record.default_card_info
+        }
     else:
-        try:
-            CardCache.update_or_insert(card_name, card_info)
-        except Exception as e:
-            traceback.print_exc()
-            CardCache.delete(card_name)
-            return False
-    return True
-
-@router.get('/card/get_card_info_cache')
-def get_card_info_cache(card_name: str):
-    return CardCache.get(card_name)
-
-def full_card_info(card, background_tasks: BackgroundTasks):
-    pre_models = card.get('pre_models', [])
-    is_ready = True
-    for model_hash in pre_models:
-        model_info = ModelInfoTable.sync_get_model_info_by_hash(model_hash)
-        if not model_info:
-            is_ready = False
-    card['is_ready'] = is_ready
-
-    cover_image = card.get('cover_image', None)
-    if cover_image:
-        local_image = MediaFile.get_by_url(cover_image)
-        if local_image:
-            card['cover_image'] = local_image.get('local_path', None)
-        else:
-            background_tasks.add_task(MediaFile.add_record, cover_image)
-
-    return card
-
+        card_record.cached_card_info = CardInfo(**card_info)
+        card_record.save()
+        return {
+            'errorMessage': None,
+            'cardInfo': card_record.cached_card_info
+        }
 @router.get('/card/all_cards')
-async def get_all_cards(background_tasks: BackgroundTasks):
-    cards = await CardModelTable.get_all_cards(force_renew=True)
-    full_cards = []
-    for card in cards:
-        full_card = full_card_info(card, background_tasks)
-        full_cards.append(full_card)
-    return full_cards
-
+async def get_all_cards(background_task: BackgroundTasks):
+    all_cards = CardDataModel.get_all()
+    for card in all_cards:
+        if card and card.cover_image.startswith('http'):
+            background_task.add_task(download_cover_image, card)
+    return all_cards
 @router.get('/card/download_pre_models')
 async def download_pre_models(card_name: str):
     pass
@@ -139,71 +123,14 @@ class GenerationReq(BaseModel):
 async def generate(req: GenerationReq):
     card_name = req.card_name
     client_id = req.client_id
-    card_info_resp = await local_card_info(card_name, use_cache=True)
-    card_info = card_info_resp["cardInfo"]
-    if not card_info:
-        return card_info
-    prompt = card_info_to_prompt(card_info)
-    TaskQueue.put(prompt, client_id)
+    card_record = CardDataModel.get(card_name)
+    if not card_record:
+        return False
+
+    current_card_info = card_record.get_card_info()
+    prompt = current_card_info.to_prompt()
+    TaskQueue.put(card_name, prompt, client_id)
     return True
-
-def card_info_to_prompt(card_info, filter_none=True):
-    card_name = card_info["card_name"]
-    widgets = card_info["widgets"]
-    addons = card_info["addons"]
-
-    def is_none_in_dict_values(d: dict):
-        result = False
-        for k, v in d.items():
-            if v is None or v == 'None':
-                result = True
-                return result
-
-    base_inputs = {}
-    for widget in widgets:
-        widget_type = widget.get('widget_type')
-        if widget_type == 'GroupedWidgets':
-            _widgets = widget.get('value')
-            for _widget in _widgets:
-                parma_name = _widget.get('param_name')
-                value = _widget.get('value')
-                base_inputs[parma_name] = value
-        else:
-            parma_name = widget.get('param_name')
-            value = widget.get('value')
-            base_inputs[parma_name] = value
-
-    addon_inputs = {}
-    for addon in addons:
-        addon_name = addon.get('addon_name')
-        addon_widgets_list = addon.get('widgets')
-        can_turn_off = addon.get('can_turn_off')
-        is_off = addon.get('is_off')
-
-        if can_turn_off and is_off:
-            continue
-
-        addon_inputs_list = []
-        for addon_widgets in addon_widgets_list:
-            addon_widgets_input = {}
-            for addon_widget in addon_widgets:
-                parma_name = addon_widget.get('param_name')
-                value = addon_widget.get('value')
-                addon_widgets_input[parma_name] = value
-
-            if filter_none and is_none_in_dict_values(addon_widgets_input):
-                continue
-            addon_inputs_list.append(addon_widgets_input)
-
-        if addon_inputs_list:
-            addon_inputs[addon_name] = addon_inputs_list
-
-    prompt = Prompt(
-        card_name=card_name,
-        base_inputs=base_inputs,
-        addon_inputs=addon_inputs
-    )
-    return prompt
 
 class WidgetFunctionParams(BaseModel):
     func_name: str
@@ -239,19 +166,25 @@ async def get_local_file(path: str):
 
 @router.get('/art/search')
 async def art_search(substr: str | None = None):
-    return await ArtworkTable.search_by_substr(substr)
+    return Artwork.search_by_substr(substr)
 
 @router.get('/art/get_artworks')
-async def get_artworks():
-    return await ArtworkTable.get_artworks(None)
+async def get_artworks(page_size: int = 20, page_num: int = 0):
+    artworks = Artwork.get_all(limit=page_size, skip=page_size*page_num)
+    has_next = len(artworks) == page_size
+    return {
+        'artworks': artworks,
+        'page_num': page_num,
+        'has_next': has_next
+    }
 
 @router.get('/art/get_artwork')
 async def get_artwork(artwork_id: int):
-    return await ArtworkTable.get_artwork(artwork_id)
+    return Artwork.get(artwork_id)
 
 @router.get('/art/get_art_by_path')
 async def get_art_by_path(path: str):
-    return await ArtworkTable.get_art_by_path(path)
+    return Artwork.get(path)
 
 @router.get('/recently_used/')
 async def recently_used(media_type: str, sub_key: str = ""):
@@ -260,15 +193,29 @@ async def recently_used(media_type: str, sub_key: str = ""):
         return []
     return InputFile.get_input_files(media_type, sub_key)
 
-class MediaAddRequest(BaseModel):
+class MediaRequest(BaseModel):
     media_type: str
     sub_key: Optional[str] = ""
     local_path: str
 
 @router.post('/add_recently_used')
-async def add_recently_used(req: MediaAddRequest):
-    file = InputFile.add_input_file(file_path=req.local_path, sub_key=req.sub_key)
-    return file
+async def add_recently_used(req: MediaRequest):
+    try:
+        file = InputFile.add_input_file(file_path=req.local_path, sub_key=req.sub_key)
+        return file
+    except Exception as e:
+        logger.error(e)
+        return None
+
+@router.post('/remove_recently_used')
+async def remove_recently_used(req: MediaRequest):
+    try:
+        media_files = InputFile.remove_and_return(file_path=req.local_path, media_type=req.media_type, sub_key=req.sub_key)
+        return media_files
+    except Exception as e:
+        logger.error(e)
+        return []
+
 
 # @router.get('/test_multi_d')
 # def test_multi_d():
@@ -290,16 +237,15 @@ async def add_recently_used(req: MediaAddRequest):
 
 @router.get('/task/get_tasks')
 async def get_tasks():
-    tasks = await TaskTable.get_tasks(None)
-    return tasks[:30]
+    tasks = Task.get_all()
+    return tasks
 
 @router.get('/task/remove_task')
 async def remove_task(task_id: str):
     if not task_id:
         return False
-    await TaskTable.remove_task(int(task_id))
+    Task.remove(task_id)
     return True
-
 @router.get('/utils/is_dir_path_ok')
 def is_dir_path_ok(dir_path: str):
     path = Path(dir_path)
@@ -308,3 +254,10 @@ def is_dir_path_ok(dir_path: str):
     if not path.is_dir():
         return False, "Path: '{}' must be dir to store model files.".format(dir_path)
     return 'ok'
+@router.get('/test/other_test')
+async def other_test():
+    from misc.helpers_civitai import sync_get_civitai_model_info_by_hash
+    success, resp, error = sync_get_civitai_model_info_by_hash('b87f0c1c541e30f6b507795ef3aa9f7e5a1726af566f8970b07ed717c13ec5a5')
+    print(success, resp, error)
+
+

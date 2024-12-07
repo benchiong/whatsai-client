@@ -8,15 +8,19 @@ from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SD3Card(Card):
-    name = "SD3"
-    display_name = "SD3"
 
     meta_data = {
-        'name': name,
+        'name': 'SD3',
         'describe': "SD3",
+        'display_name': "SD3",
 
-        # https: // civitai.com / models / 497255
-        "pre_models": ["CC236278D28C8C3ECCB8E21EE0A67EBED7DD6E9CE40AA9DE914FA34E8282F191"],
+        "pre_models": [
+            {
+                # https://civitai.com/models/497255
+                "hash": "CC236278D28C8C3ECCB8E21EE0A67EBED7DD6E9CE40AA9DE914FA34E8282F191"
+            }
+        ],
+
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0a7b3477-f915-487b-934f-7d84c5ecedcc/width=450/image-90.jpeg"
     }
 
@@ -107,7 +111,7 @@ class SD3Card(Card):
 
             result = self.save_image(
                 images=pixel_samples,
-                card_info=self.card_inputs_info,
+                card_name=self.card_inputs_info.get('card_name'),
                 inputs_info=base_inputs,
                 addon_inputs_info=addon_inputs
             )

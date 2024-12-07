@@ -1,7 +1,11 @@
 import gc
 import traceback
 from abc import ABC, abstractmethod
+from typing import Optional
 
+from pydantic import BaseModel
+
+from data_type.whatsai_card import PreModel
 from .comp import Comp
 from .addon import Addon, ADD_ON_CLASS_MAP, AddonType
 
@@ -9,10 +13,24 @@ from .addon import Addon, ADD_ON_CLASS_MAP, AddonType
 class ValidException(Exception):
     pass
 
+class CardMetaData(BaseModel):
+    name: str
+    display_name: Optional[str] = None
+    describe: Optional[str] = None
+    pre_models: list[PreModel] = []
+    cover_image: Optional[str] = None
+
+
 class Card(ABC):
-    name = None
-    display_name = None
-    meta_data = {}
+    meta_data: dict  # a dict can be parsed to CardMetaData
+
+    @property
+    def name(self):
+        return self.meta_data.get('name')
+
+    @property
+    def display_name(self):
+        return self.meta_data.get('display_name')
 
     def __init__(self, name=None, display_name=None, card_type=None, cache_out=True, valid_inputs=True):
         """ Take this as the workflow in ComfyUI, but the creation is by Card author through coding
@@ -21,11 +39,6 @@ class Card(ABC):
 
             Subclass should create and add comps, the order of comps to register matters.
         """
-
-        if name:
-            self.name = name
-        if display_name:
-            self.display_name = display_name
 
         self.card_type = card_type
 
@@ -168,8 +181,8 @@ class Card(ABC):
     @property
     def card_info(self):
         return {
-            'card_name': self.name,
-            'card_display_name': self.display_name,
+            'card_name': self.meta_data.get('name'),
+            'card_display_name': self.meta_data.get('display_name'),
             'widgets': self.widgets_info_in_list,
             'addons': self.addons_info_in_list
         }

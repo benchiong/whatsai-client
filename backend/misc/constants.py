@@ -1,3 +1,4 @@
+from typing import Literal
 
 supported_pt_extensions: set[str] = {'.ckpt', '.pt', '.bin', '.pth', '.safetensors', '.pkl', '.sft'}
 """ Model file extension whatsai supported, same as ComfyUI. """
@@ -30,5 +31,4 @@ webui_model_dirs_map = {
     'gligen': 'models/gligen'
 }
 
-
-
+MediaType = Literal['image', 'video', 'audio', 'other']

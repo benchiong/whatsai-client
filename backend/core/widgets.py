@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from core.abstracts import Widget
-from tiny_db.model_info import ModelInfoTable
+from data_type.whatsai_model_info import ModelInfo
 from misc.helpers import file_type_guess
 from core.extras import tae_model_info_list
 
@@ -196,7 +196,7 @@ class ModelComboWidget(DynamicComboWidget):
             values_function_name=values_function_name,
             values_function_params=values_function_params,
             default_value=default_value,
-            value_type=ModelInfoTable.DataModel  # we don't verify it, so it's ok here.
+            value_type=ModelInfo  # we don't verify it, so it's ok here.
         )
 
         #todo: fix values_function_params UI and deal logic
@@ -315,31 +315,31 @@ class GroupedWidgets(Widget):
 
 
 def list_checkpoints(base_model: str | None = None):
-    checkpoints = ModelInfoTable.sync_get_model_info_by_model_type('checkpoint', base_model=base_model)
-    return checkpoints
+    return ModelInfo.get_model_infos(model_type='checkpoint')
 
 def list_loras(base_model: str | None = None):
-    loras = ModelInfoTable.sync_get_model_info_by_model_type('lora', base_model=base_model)
-    return loras
+    return ModelInfo.get_model_infos(model_type='lora')
+
 
 def list_vaes(approx_vaes: bool = True, base_model: str | None = None):
-    vae_records = ModelInfoTable.sync_get_model_info_by_model_type("vae", base_model=base_model)
-
+    vaes = ModelInfo.get_model_infos(model_type='vae')
     taesd_list = tae_model_info_list()
     if approx_vaes:
-        vae_records.extend(taesd_list)
+        vaes.extend(taesd_list)
 
-    return vae_records
+    return vaes
 
 def list_hypernets(base_model: str | None = None):
-    hypernets = ModelInfoTable.sync_get_model_info_by_model_type('hypernet', base_model=base_model)
-    return hypernets
+    return ModelInfo.get_model_infos(model_type='hypernet')
+
 
 def list_upscalers():
-    return ModelInfoTable.sync_get_model_info_by_model_type('upscaler')
+    return ModelInfo.get_model_infos(model_type='upscaler')
+
 
 def list_controlnets():
-    return ModelInfoTable.sync_get_model_info_by_model_type('controlnet')
+    return ModelInfo.get_model_infos(model_type='controlnet')
+
 
 WIDGET_FUNCTION_MAP = {
     'list_checkpoints': list_checkpoints,

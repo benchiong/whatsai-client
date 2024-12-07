@@ -23,7 +23,7 @@ from core.funcs import (
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget
 
 import comfy
-from tiny_db.model_info import ModelInfoTable
+from data_type.whatsai_model_info import ModelInfo
 
 
 class Comp_CheckpointLoader(Comp):
@@ -33,7 +33,7 @@ class Comp_CheckpointLoader(Comp):
         self.load_checkpoint = Func_CheckpointLoaderSimple(cache_out=cache_out, valid_inputs=valid_inputs)
         self.register_func(self.load_checkpoint)
 
-        default_model = ModelInfoTable.sync_get_model_info_by_file_name(default_model_name)
+        default_model = ModelInfo.get(default_model_name)
 
         self.widget_model_list = ModelComboWidget(
             display_name=display_name,
@@ -60,7 +60,7 @@ class Comp_VAELoader(Comp):
         self.func_model_loader = Func_VAELoader(valid_inputs=valid_inputs)
         self.register_func(self.func_model_loader)
 
-        default_model = ModelInfoTable.sync_get_model_info_by_file_name(default_model_name) if default_model_name else None
+        default_model = ModelInfo.get(default_model_name) if default_model_name else None
 
         self.widget_model_loader = ModelComboWidget(
             display_name=display_name,

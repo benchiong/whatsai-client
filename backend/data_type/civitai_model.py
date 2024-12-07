@@ -17,3 +17,5 @@ class CivitaiModel(PydanticModel):
 
     modelVersions: list[CivitaiModelVersion]
 
+
+

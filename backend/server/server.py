@@ -1,3 +1,4 @@
+import traceback
 from contextlib import asynccontextmanager
 
 import socketio
@@ -5,25 +6,21 @@ from fastapi import FastAPI, Request
 
 from starlette.middleware.cors import CORSMiddleware
 
-from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
+from data_type.whatsai_card import CardDataModel
 from misc.logger import logger
-from tiny_db.init import initialize_dbs
-from tiny_db.model_downloading_info import ModelDownloadInfoTable
 from .sockets import sio
 from .router import router
-from .router_model import router as model_path_router, start_to_download
+from .router_model import router as model_path_router
 from .router_websocket import router as socket_router
 from .router_civitai import router as civitai_router
 
-def recovery_download_tasks():
-    downloading_records = ModelDownloadInfoTable.get_all_downloading_records()
-    for record in downloading_records:
-        start_to_download(ModelDownloadingInfo(**record))
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await initialize_dbs()
-    recovery_download_tasks()
+    try:
+        CardDataModel.fill_default_card_infos()
+    except Exception as e:
+        traceback.print_exc()
+        print("fill_default_card_infos error:", e)
     yield
 
 
