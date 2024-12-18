@@ -18,7 +18,6 @@ uvicorn
 python-socketio
 pydantic
 
-tinydb
 numpy
 pillow
 sympy
@@ -37,7 +36,8 @@ pyyaml
 starlette
 pydantic
 httpx
-aiotinydb
 aiofiles
 loguru
 psutil
+
+python-box

@@ -21,8 +21,9 @@ from misc.json_cache import JsonCache
 from misc.logger import logger
 from misc.whatsai_dirs import cache_dir
 
-
 datetime_formatter = '%Y-%m-%d %H:%M:%S'
+
+
 async def async_get(url, headers=None, timeout=10, retry=3):
     while retry > 0:
         try:
@@ -35,6 +36,7 @@ async def async_get(url, headers=None, timeout=10, retry=3):
             traceback.print_exc()
     return None
 
+
 def sync_get(url, headers=None, timeout=10, retry=3):
     while retry > 0:
         try:
@@ -45,6 +47,7 @@ def sync_get(url, headers=None, timeout=10, retry=3):
             logger.debug(f"sync_get error: {e}")
             traceback.print_exc()
     return None
+
 
 async def async_post(url, data, headers=None, timeout=10, retry=3):
     while retry > 0:
@@ -57,6 +60,7 @@ async def async_post(url, data, headers=None, timeout=10, retry=3):
             logger.debug(f"async_post error: {e}")
             traceback.print_exc()
 
+
 def sync_post(url, data, headers=None, timeout=10, retry=3):
     while retry > 0:
         try:
@@ -66,6 +70,7 @@ def sync_post(url, data, headers=None, timeout=10, retry=3):
             retry -= 1
             logger.debug(f"sync_post error: {e}")
             traceback.print_exc()
+
 
 async def async_head(url, headers=None, timeout=10):
     retry = 3
@@ -79,6 +84,7 @@ async def async_head(url, headers=None, timeout=10):
             logger.debug(f"async_head error: {e}")
     return None
 
+
 def sync_head(url, headers=None, timeout=10):
     retry = 3
     while retry > 0:
@@ -89,6 +95,7 @@ def sync_head(url, headers=None, timeout=10):
             retry -= 1
             logger.debug(f"sync_head error: {e}")
     return None
+
 
 async def download_image(url: str, file_path: str, headers=None):
     try:
@@ -109,6 +116,7 @@ async def download_image(url: str, file_path: str, headers=None):
         traceback.print_exc()
         return None
 
+
 def sync_download_image(url: str, file_path: str, headers=None):
     try:
         local_image_path = JsonCache.get('download_image', url)
@@ -127,6 +135,7 @@ def sync_download_image(url: str, file_path: str, headers=None):
         traceback.print_exc()
         return None
 
+
 def get_file_created_timestamp_and_datetime(file_path: str):
     if not Path(file_path).exists():
         return None, None
@@ -135,11 +144,13 @@ def get_file_created_timestamp_and_datetime(file_path: str):
     date_str = datetime.fromtimestamp(stamp).strftime(datetime_formatter)
     return stamp, date_str
 
+
 def get_file_size_in_kb(file_path: str):
     if not Path(file_path).exists():
         return None
 
     return os.path.getsize(file_path) / 1024
+
 
 def get_files_in_dir(dir_path: str | Path):
     """ Get all files in the dir path. """
@@ -160,6 +171,7 @@ def get_files_in_dir(dir_path: str | Path):
             pass
     return files
 
+
 def get_model_files_in_dir(dir_path: str):
     files_in_dir = get_files_in_dir(dir_path)
 
@@ -171,6 +183,7 @@ def get_model_files_in_dir(dir_path: str):
             model_files.append(str(file.absolute()))
 
     return model_files
+
 
 def get_items_in_dir(dir_path: str | Path):
     dir_path = Path(dir_path) if isinstance(dir_path, str) else dir_path
@@ -184,6 +197,7 @@ def get_items_in_dir(dir_path: str | Path):
             r.append(p)
     return r
 
+
 async def read_chunks(file, size: int = io.DEFAULT_BUFFER_SIZE):
     """Yield pieces of data from a file-like object until EOF."""
     while True:
@@ -192,11 +206,13 @@ async def read_chunks(file, size: int = io.DEFAULT_BUFFER_SIZE):
             break
         yield chunk
 
+
 def sync_read_chunks(file, size: int):
     while chunk := file.read(size):
         if not chunk:
             break
         yield chunk
+
 
 async def gen_file_sha256(file_path: str):
     cache_key = 'file_sha256'
@@ -215,6 +231,7 @@ async def gen_file_sha256(file_path: str):
     hash_value = h.hexdigest()
     JsonCache.add(cache_key, file_path, hash_value)
     return hash_value
+
 
 def sync_gen_file_sha256(file_path: str) -> str:
     cache_key = 'file_sha256'
@@ -251,9 +268,11 @@ def thumbnail(file_path: str, max_edge=256, min_size=64):
 
     return thumb_file_path, img.size
 
+
 def file_type_guess(file):
     kind = filetype.guess(file)
     return kind.mime if kind else None
+
 
 def is_url(may_be_url: str):
     try:
@@ -262,12 +281,13 @@ def is_url(may_be_url: str):
     except ValueError:
         return False
 
+
 # from ComfyUI
 def pillow(fn, arg):
     prev_value = None
     try:
         x = fn(arg)
-    except (OSError, UnidentifiedImageError, ValueError): #PIL issues #4472 and #2445, also fixes ComfyUI issue #3416
+    except (OSError, UnidentifiedImageError, ValueError):  # PIL issues #4472 and #2445, also fixes ComfyUI issue #3416
         prev_value = ImageFile.LOAD_TRUNCATED_IMAGES
         ImageFile.LOAD_TRUNCATED_IMAGES = True
         x = fn(arg)
@@ -276,9 +296,26 @@ def pillow(fn, arg):
             ImageFile.LOAD_TRUNCATED_IMAGES = prev_value
     return x
 
+def get_meta_info(file_path):
+    # todo, support video/ audio ...
+    try:
+        with Image.open(file_path) as img:
+            width, height = img.size
+            image_format = img.format
+            return {
+                'width': width,
+                'height': height,
+                'format': image_format
+            }
+    except Exception as e:
+        logger.debug(e)
+        traceback.print_exc()
+        return {}
+
+
+
 def get_now_timestamp_and_str():
     now = datetime.now()
     timestamp = int(now.timestamp())
     datetime_str = now.strftime("%Y/%m/%d %H:%M:%S")
     return timestamp, datetime_str
-

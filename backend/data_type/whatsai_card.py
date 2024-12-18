@@ -13,11 +13,13 @@ from misc.whatsai_dirs import media_files_dir
 
 CardType = Literal['builtin', 'custom']
 
+
 class Prompt(BaseModel):
     """ Prompt are just inputs of the card, set by user, use to generate. """
     card_name: str
     base_inputs: dict
     addon_inputs: Optional[dict] = None
+
 
 class CardInfo(BaseModel):
     """ CardInfo are about widgets card and card's addon include, use to tell frontend to render. """
@@ -30,6 +32,7 @@ class CardInfo(BaseModel):
         card_name = self.card_name
         widgets = self.widgets
         addons = self.addons
+
         def is_none_in_dict_values(d: dict):
             for k, v in d.items():
                 if v is None or v == 'None':
@@ -102,6 +105,7 @@ class PreModel(BaseModel):
             return False
         return Path(model_info.local_path).exists()
 
+
 class CardDataModel(PyDBModel):
     card_name: str
 
@@ -160,15 +164,17 @@ class CardDataModel(PyDBModel):
 
     @classmethod
     def init(cls):
-        from core.cards import builtin_cards_map
+        from core.cards import BUILTIN_CARDS_MAP
         cls.create_table()
         if not is_prod:
             cls.clear()
 
         cards_to_insert = []
-        for card_name in builtin_cards_map.keys():
-            card_class = builtin_cards_map.get(card_name)
+        for card_name in BUILTIN_CARDS_MAP.keys():
+            print(card_name, type(card_name))
+            card_class = BUILTIN_CARDS_MAP.get(card_name)
             meta_data = card_class.meta_data
+            print(meta_data)
             created_time_stamp, created_datetime_str = get_now_timestamp_and_str()
             card = cls(
                 card_name=card_name,
@@ -254,6 +260,7 @@ class CardDataModel(PyDBModel):
                 )
                 """, card_tuples)
             conn.commit()
+
     @classmethod
     def get(cls, id_or_card_name):
         conn = cls.conn()
@@ -336,8 +343,8 @@ class CardDataModel(PyDBModel):
             return None
 
         if card_record.card_type == 'builtin':
-            from core.cards import builtin_cards_map
-            return builtin_cards_map.get(card_name)
+            from core.cards import BUILTIN_CARDS_MAP
+            return BUILTIN_CARDS_MAP.get(card_name)
         else:
             # from misc.custom_cards import custom_card_map
             # return custom_card_map.get(card_name)
@@ -360,6 +367,7 @@ class CardDataModel(PyDBModel):
                 if added_card_info:
                     added_card_infos.append(added_card_info)
         return added_card_infos
+
 
 async def download_cover_image(card_data_model: CardDataModel):
     if card_data_model.cover_image and card_data_model.cover_image.startswith('http'):

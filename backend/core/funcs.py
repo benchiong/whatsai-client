@@ -19,13 +19,12 @@ import comfy.utils
 import comfy.model_patcher
 import comfy.controlnet
 from comfy.taesd.taesd import TAESD
-from core.abstracts import Func
-from data_type.whatsai_card import Prompt
+from core.abstracts.func import Func, IOInfo
 from data_type.whatsai_artwork import Artwork
 from data_type.whatsai_model_dir import ModelDir
 from data_type.whatsai_model_info import ModelInfo
 from core.extras import tae_model_info_list
-from misc.helpers import pillow
+from misc.helpers import pillow, get_meta_info
 from misc.logger import logger
 
 try:
@@ -37,13 +36,23 @@ try:
 except Exception as e:
     logger.debug("Fail to imported spandrel_extra_arches: {}".format(e))
 
-class Func_CheckpointLoaderSimple(Func):
-    def __init__(self, name="Checkpoint Loader", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
-    def run(self, checkpoint_hash):
-        model_info = ModelInfo.get(checkpoint_hash)
-        checkpoint_path = model_info.local_path
+class Func_CheckpointLoaderSimple(Func):
+    def __init__(self, name="Checkpoint Loader"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='checkpoint_id', data_type='STRING')
+        )
+
+        self.set_outputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='clip', data_type='CLIP'),
+            IOInfo(name='vae', data_type='VAE'),
+        )
+
+    def run(self, checkpoint_id):
+        checkpoint_path = ModelInfo.get(checkpoint_id).local_path
         embedding_directories = ModelDir.get_dirs('embedding')
 
         out = comfy.sd.load_checkpoint_guess_config(
@@ -54,28 +63,41 @@ class Func_CheckpointLoaderSimple(Func):
         )
         return out[:3]
 
-class Func_VAELoader(Func):
-    def __init__(self, name="Load VAE", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
-    def run(self, vae_model):
+class Func_VAELoader(Func):
+    def __init__(self, name="Load VAE"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='vae_id', data_type='STRING')
+        )
+
+        self.set_outputs(
+            IOInfo(name='vae', data_type='VAE'),
+        )
+
+    def run(self, vae_id):
+        vae_model_info = ModelInfo.get(vae_id)
+
         tae_model_infos = tae_model_info_list()
         is_vae_model_tae = False
 
         for tae_model in tae_model_infos:
-            if tae_model.get('local_path') == vae_model.get('local_path'):
+            if tae_model.local_path == vae_model_info.local_path:
                 is_vae_model_tae = True
                 break
+
         if is_vae_model_tae:
-            sd = self.load_taesd(vae_model)
+            sd = self.load_taesd(vae_model_info)
         else:
-            vae_path = vae_model.get('local_path')
+            vae_path = vae_model_info.local_path
             sd = comfy.utils.load_torch_file(vae_path)
+
         vae = comfy.sd.VAE(sd=sd)
-        return vae
+        return (vae,)
 
     def load_taesd(self, vae_model):
-        encoder_path, decoder_path = vae_model.get('local_path').split('|')
+        encoder_path, decoder_path = vae_model.local_path.split('|')
         name = Path(encoder_path).stem.replace('_encoder', '')
         sd = {}
         enc = comfy.utils.load_torch_file(encoder_path)
@@ -102,27 +124,45 @@ class Func_VAELoader(Func):
 
 
 class Func_CLIPTextEncode(Func):
-    def __init__(self, name="Clip Text Encoder", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="ClipTextEncoder"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='clip', data_type='CLIP'),
+            IOInfo(name='text', data_type='STRING')
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='cond', data_type='CONDITIONING'),
+        )
 
     def run(self, clip, text):
         tokens = clip.tokenize(text)
         output = clip.encode_from_tokens(tokens, return_pooled=True, return_dict=True)
         cond = output.pop("cond")
-        # print(type(cond), type(output), output.keys(), [type(v) for v in output.values()])
-        # <class 'torch.Tensor'> <class 'dict'> dict_keys(['pooled_output']) [<class 'torch.Tensor'>]
-        return [[cond, output]]
+        return ([[cond, output]],)
 
 
 class Func_EmptyLatentImage(Func):
-    def __init__(self, name=None, cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name='EmptyLatentImage'):
+        super().__init__(name=name)
 
         self.device = comfy.model_management.intermediate_device()
 
-    def run(self, width: int, height: int, batch_size: int = 1):
+        self.set_inputs(
+            IOInfo(name='width', data_type='INT'),
+            IOInfo(name='height', data_type='INT')
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, width, height, batch_size=1):
         latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
-        return {"samples": latent}
+        return ({"samples": latent},)
 
 
 def common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent, denoise=1.0,
@@ -148,14 +188,17 @@ def common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, 
                                   disable_pbar=disable_pbar, seed=seed)
     out = latent.copy()
     out["samples"] = samples
-    return out
+    return (out,)
+
 
 class LatentPreviewMethod(enum.Enum):
     Auto = "auto"  # this will use taesd first.
     Latent2RGB = "latent2rgb"
     TAESD = "taesd"
 
+
 MAX_PREVIEW_RESOLUTION = 512
+
 
 def preview_to_base64(latent_image):
     latents_ubyte = (((latent_image + 1.0) / 2.0).clamp(0, 1)  # change scale from -1..1 to 0..1
@@ -169,9 +212,11 @@ def preview_to_base64(latent_image):
     img_byte = buffered.getvalue()
     return 'data:image/png;base64,' + base64.b64encode(img_byte).decode('utf-8')
 
+
 class LatentPreviewer:
     def decode_latent_to_preview_base64(self, x0):
         pass
+
 
 class TAESDPreviewerImpl(LatentPreviewer):
     def __init__(self, taesd):
@@ -181,6 +226,7 @@ class TAESDPreviewerImpl(LatentPreviewer):
         x_sample = self.taesd.decode(x0[:1])[0].movedim(0, 2)
         return preview_to_base64(x_sample)
 
+
 class Latent2RGBPreviewer(LatentPreviewer):
     def __init__(self, latent_rgb_factors):
         self.latent_rgb_factors = torch.tensor(latent_rgb_factors, device="cpu")
@@ -189,6 +235,7 @@ class Latent2RGBPreviewer(LatentPreviewer):
         self.latent_rgb_factors = self.latent_rgb_factors.to(dtype=x0.dtype, device=x0.device)
         latent_image = x0[0].permute(1, 2, 0) @ self.latent_rgb_factors
         return preview_to_base64(latent_image)
+
 
 def get_previewer(preview_method, device, latent_format):
     previewer = None
@@ -207,18 +254,52 @@ def get_previewer(preview_method, device, latent_format):
         previewer = Latent2RGBPreviewer(latent_format.latent_rgb_factors)
     return previewer
 
+
 class Func_KSampler(Func):
     def __init__(self,
                  name='kSample',
-                 cache_out=True,
-                 valid_inputs=True,
                  preview_method=LatentPreviewMethod.Auto,
                  preview_steps=3
                  ):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+        super().__init__(name=name)
         self.preview_method = preview_method
         self.previewer = None
         self.preview_steps = preview_steps
+        self.callback = None
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='latent_image', data_type='LATENT'),
+
+            IOInfo(name='seed', data_type='INT'),
+            IOInfo(name='steps', data_type='INT'),
+            IOInfo(name='cfg', data_type='INT'),
+            IOInfo(name='sampler_name', data_type='STRING'),
+            IOInfo(name='scheduler', data_type='STRING'),
+            IOInfo(name='denoise', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def set_callback(self, cb):
+        self.callback = cb
+
+    def get_callback(self):
+        if not self.callback:
+            return None
+
+        def _callback(step, x0, x, total_steps):
+            """ Return step, total_steps, and preview_bytes. """
+            step += 1
+            if step == 1 or step == total_steps or step % self.preview_steps == 0:
+                preview_bytes = self.previewer.decode_latent_to_preview_base64(x0)
+                self.callback(step, total_steps, preview_bytes)
+
+        return _callback
 
     def run(self,
             model,
@@ -231,34 +312,61 @@ class Func_KSampler(Func):
             negative,
             latent_image,
             denoise=1.0,
-            callback = None,
             ):
 
         if not self.previewer:
             self.previewer = get_previewer(self.preview_method, model.load_device, model.model.latent_format)
 
-        def _callback(step, x0, x, total_steps):
-            step += 1
-            if step == 1 or step == total_steps or step % self.preview_steps == 0:
-                preview_bytes = self.previewer.decode_latent_to_preview_base64(x0)
-                if callback:
-                    callback(step, total_steps, preview_bytes)
-
         return common_ksampler(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image,
-                               denoise=denoise, callback=_callback)
+                               denoise=denoise, callback=self.get_callback())
+
 
 class Func_KSamplerAdvanced(Func):
     def __init__(self,
                  name='KSamplerAdvanced',
-                 cache_out=True,
-                 valid_inputs=True,
                  preview_method=LatentPreviewMethod.Auto,
                  preview_steps=3
                  ):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+        super().__init__(name=name)
         self.preview_method = preview_method
         self.previewer = None
         self.preview_steps = preview_steps
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='add_noise', data_type='STRING'),
+            IOInfo(name='noise_seed', data_type='INT'),
+            IOInfo(name='steps', data_type='INT'),
+            IOInfo(name='cfg', data_type='INT'),
+            IOInfo(name='sampler_name', data_type='STRING'),
+            IOInfo(name='scheduler', data_type='STRING'),
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='latent_image', data_type='LATENT'),
+            IOInfo(name='start_at_step', data_type='INT'),
+            IOInfo(name='end_at_step', data_type='INT'),
+            IOInfo(name='return_with_leftover_noise', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def set_callback(self, cb):
+        self.callback = cb
+
+    def get_callback(self):
+        if not self.callback:
+            return None
+
+        def _callback(step, x0, x, total_steps):
+            """ Return step, total_steps, and preview_bytes. """
+            step += 1
+            if step == 1 or step == total_steps or step % self.preview_steps == 0:
+                preview_bytes = self.previewer.decode_latent_to_preview_base64(x0)
+                self.callback(step, total_steps, preview_bytes)
+
+        return _callback
 
     def run(self, model, add_noise, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative,
             latent_image, start_at_step, end_at_step, return_with_leftover_noise, denoise=1.0, callback=None):
@@ -281,106 +389,151 @@ class Func_KSamplerAdvanced(Func):
             disable_noise = True
         return common_ksampler(model, noise_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image,
                                denoise=denoise, disable_noise=disable_noise, start_step=start_at_step,
-                               last_step=end_at_step, force_full_denoise=force_full_denoise, callback=_callback)
+                               last_step=end_at_step, force_full_denoise=force_full_denoise,
+                               callback=self.get_callback())
 
 
 class Func_VAEDecode(Func):
-    def __init__(self, name="Vae Decode", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Vae Decode"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='samples', data_type='LATENT'),
+            IOInfo(name='vae', data_type='VAE'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='image', data_type='IMAGE'),
+        )
 
     def run(self, vae, samples):
-        return vae.decode(samples["samples"])
+        return (vae.decode(samples["samples"]),)
+
 
 class Func_VAEEncode(Func):
-    def __init__(self, name="Vae Encode", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Vae Encode"):
+        super().__init__(name=name)
 
-    def run(self, vae, pixels):
+        self.set_inputs(
+            IOInfo(name='pixels', data_type='IMAGE'),
+            IOInfo(name='vae', data_type='VAE'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, pixels, vae):
         t = vae.encode(pixels[:, :, :, :3])
-        return {"samples": t}
+        return ({"samples": t},)
 
 
 class Func_SaveImage(Func):
-    def __init__(self, name="Save Image", cache_out=False, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Save Image"):
+        super().__init__(name=name)
 
-        self.prefix_append = ""
         self.compress_level = 4
+
+        self.set_inputs(
+            IOInfo(name='images', data_type='IMAGE'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='result', data_type='RESULT'),
+        )
 
     def run(self,
             images: Tensor,
-            card_name: str,
-            inputs_info: dict | None = None,
-            addon_inputs_info: dict | None = None,
-            meta_info: dict | None = None
             ):
         results = list()
-        assert card_name
+        assert self.prompt, "Prompt must be set where func registered."
 
         for (batch_number, image) in enumerate(images):
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             metadata = PngInfo()
-            prompt = Prompt(card_name=card_name, base_inputs=inputs_info, addon_inputs=addon_inputs_info)
-            metadata.add_text("prompt", json.dumps(prompt.model_dump()))
+            metadata.add_text("prompt", json.dumps(self.prompt.model_dump()))
 
             file_path = Artwork.create_file_path(media_type='image')
             img.save(file_path, pnginfo=metadata, compress_level=self.compress_level)
 
-            meta_info = {
-                'width': inputs_info.get('width') if inputs_info else None,
-                'height': inputs_info.get('height') if inputs_info else None
-            } if not meta_info else meta_info
+            meta_info = get_meta_info(file_path)
 
             artwork = Artwork.add_art_work(
                 file_path=file_path,
-                card_name=card_name,
+                card_name=self.prompt.card_name,
                 media_type='image',
                 meta_info=meta_info,
-                prompt=prompt,
+                prompt=self.prompt,
             )
             results.append(artwork)
 
-        return {"images": results}
+        return ({"images": results},)
 
 
 class Func_CLIPSetLastLayer(Func):
-    def __init__(self, name="Clip Skip", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Clip Skip"):
+        super().__init__(name=name)
 
-    def run(self, clip, stop_at_clip_layer):
+        self.set_inputs(
+            IOInfo(name='clip', data_type='CLIP'),
+            IOInfo(name='clip_skip', data_type='INT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='clip', data_type='CLIP'),
+        )
+
+    def run(self, clip, clip_skip):
         clip = clip.clone()
-        clip.clip_layer(stop_at_clip_layer)
-        return clip
+        clip.clip_layer(clip_skip)
+        return (clip,)
 
 
 class Func_LoraLoader(Func):
-    def __init__(self, name="LoRA Loader", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="LoRA Loader"):
+        super().__init__(name=name)
 
-    def run(self,
-            model: comfy.model_patcher.ModelPatcher,
-            clip: comfy.sd.CLIP,
-            lora_hash: str,
-            strength_model: float,
-            strength_clip: float
-            ):
-        if strength_model == 0 and strength_clip == 0:
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='clip', data_type='CLIP'),
+            IOInfo(name='lora_id', data_type='STRING'),
+            IOInfo(name='weight', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='clip', data_type='CLIP'),
+        )
+
+    def run(self, model, clip, lora_id, weight):
+        if weight == 0:
             return model, clip
 
-        lora_path = ModelInfo.get(lora_hash).local_path
+        lora_path = ModelInfo.get(lora_id).local_path
+
+        # todo: support cache management for this func inner logic.
         lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
 
-        model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
+        model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, weight, weight)
         return model_lora, clip_lora
 
-class Func_UpscaleModelLoader(Func):
-    def __init__(self, name="Load Upscale Model", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
-    def run(self, model_hash: str):
-        model_path = ModelInfo.get(model_hash).local_path
+class Func_UpscaleModelLoader(Func):
+    def __init__(self, name="Load Upscale Model"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='upscale_model_id', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='upscale_model', data_type='UPSCALE_MODEL'),
+        )
+
+    def run(self, upscale_model_id):
+        model_path = ModelInfo.get(upscale_model_id).local_path
 
         sd = comfy.utils.load_torch_file(model_path, safe_load=True)
         if "module.layers.0.residual_group.blocks.0.norm1.weight" in sd:
@@ -390,11 +543,21 @@ class Func_UpscaleModelLoader(Func):
         if not isinstance(out, ImageModelDescriptor):
             raise Exception("Upscale model must be a single-image model.")
 
-        return out
+        return (out,)
+
 
 class Func_ImageUpscaleWithModel(Func):
-    def __init__(self, name="Upscale Image (using Model)", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Upscale Image (using Model)"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='upscale_model', data_type='UPSCALE_MODEL'),
+            IOInfo(name='image', data_type='IMAGE'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='image', data_type='IMAGE'),
+        )
 
     def run(self, upscale_model, image):
         device = comfy.model_management.get_torch_device()
@@ -427,30 +590,12 @@ class Func_ImageUpscaleWithModel(Func):
 
         upscale_model.to("cpu")
         s = torch.clamp(s.movedim(-3, -1), min=0, max=1.0)
-        return s
+        return (s,)
 
-class Func_ImageScale(Func):
-    def __init__(self, name="Upscale Image", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
-
-    def run(self, image, upscale_method, width, height, crop):
-        if width == 0 and height == 0:
-            s = image
-        else:
-            samples = image.movedim(-1, 1)
-
-            if width == 0:
-                width = max(1, round(samples.shape[3] * height / samples.shape[2]))
-            elif height == 0:
-                height = max(1, round(samples.shape[2] * width / samples.shape[3]))
-
-            s = comfy.utils.common_upscale(samples, width, height, upscale_method, crop)
-            s = s.movedim(1, -1)
-        return s
 
 class Func_LatentScale(Func):
-    def __init__(self, name="Upscale Latent", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Upscale Latent"):
+        super().__init__(name=name, )
 
     def run(self, samples, upscale_method, width, height, crop):
         if width == 0 and height == 0:
@@ -469,11 +614,21 @@ class Func_LatentScale(Func):
                 height = max(64, height)
 
             s["samples"] = comfy.utils.common_upscale(samples["samples"], width // 8, height // 8, upscale_method, crop)
-        return s
+        return (s,)
+
 
 class Func_LoadImage(Func):
-    def __init__(self, name="Load Image", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Load Image"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='image_path', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='image', data_type='IMAGE'),
+            IOInfo(name='mask', data_type='MASK'),
+        )
 
     def run(self, image_path: str):
         img = pillow(Image.open, image_path)
@@ -517,18 +672,29 @@ class Func_LoadImage(Func):
 
         return output_image, output_mask
 
-class Func_HypernetLoader(Func):
-    def __init__(self, name="Hypernet Loader", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
-    def run(self, model, hypernet_hash, strength):
-        hypernet_path = ModelInfo.get(hypernet_hash).local_path
+class Func_HypernetLoader(Func):
+    def __init__(self, name="Hypernet Loader"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='hypernet_id', data_type='STRING'),
+            IOInfo(name='strength', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='model', data_type='MODEL'),
+        )
+
+    def run(self, model, hypernet_id, strength):
+        hypernet_path = ModelInfo.get(hypernet_id).local_path
         model_hypernet = model.clone()
         patch = self.load_hypernetwork_patch(hypernet_path, strength)
         if patch is not None:
             model_hypernet.set_model_attn1_patch(patch)
             model_hypernet.set_model_attn2_patch(patch)
-        return model_hypernet
+        return (model_hypernet,)
 
     def load_hypernetwork_patch(self, path, strength):
         sd = comfy.utils.load_torch_file(path, safe_load=True)
@@ -624,14 +790,27 @@ class Func_HypernetLoader(Func):
 
         return hypernetwork_patch(out, strength)
 
-class Func_VAEEncodeForInpainting(Func):
-    def __init__(self, name="Vae Encode For Inpainting", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+
+class Func_VAEEncodeForInpaint(Func):
+    def __init__(self, name="Vae Encode For Inpainting"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='pixels', data_type='IMAGE'),
+            IOInfo(name='vae', data_type='VAE'),
+            IOInfo(name='mask', data_type='MASK'),
+            IOInfo(name='grow_mask_by', data_type='INT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
 
     def run(self, vae, pixels, mask, grow_mask_by=6):
         x = (pixels.shape[1] // vae.downscale_ratio) * vae.downscale_ratio
         y = (pixels.shape[2] // vae.downscale_ratio) * vae.downscale_ratio
-        mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])), size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
+        mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
+                                               size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
 
         pixels = pixels.clone()
         if pixels.shape[1] != x or pixels.shape[2] != y:
@@ -640,7 +819,7 @@ class Func_VAEEncodeForInpainting(Func):
             pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
             mask = mask[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
 
-        #grow mask by a few pixels to keep things seamless in latent space
+        # grow mask by a few pixels to keep things seamless in latent space
         if grow_mask_by == 0:
             mask_erosion = mask
         else:
@@ -656,14 +835,27 @@ class Func_VAEEncodeForInpainting(Func):
             pixels[:, :, :, i] += 0.5
         t = vae.encode(pixels)
 
-        return {
-            "samples": t,
-            "noise_mask": (mask_erosion[:, :, :x, :y].round())
-        }
+        return ({"samples": t, "noise_mask": (mask_erosion[:, :, :x, :y].round())},)
 
-class Func_ImagePadForOutpainting(Func):
-    def __init__(self, name="Image Pad For Outpainting", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+
+class Func_ImagePadForOutpaint(Func):
+    def __init__(self, name="Image Pad For Outpainting"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='image', data_type='IMAGE'),
+            IOInfo(name='left', data_type='INT'),
+            IOInfo(name='top', data_type='INT'),
+            IOInfo(name='right', data_type='INT'),
+            IOInfo(name='bottom', data_type='INT'),
+            IOInfo(name='feathering', data_type='INT'),
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='image', data_type='IMAGE'),
+            IOInfo(name='mask', data_type='MASK'),
+        )
 
     def run(self, image, left, top, right, bottom, feathering):
         d1, d2, d3, d4 = image.size()
@@ -708,18 +900,39 @@ class Func_ImagePadForOutpainting(Func):
 
         return new_image, mask
 
-class Func_ControlNetLoader(Func):
-    def __init__(self, name="ContronlNet Loader", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
 
-    def run(self, controlnet_hash):
-        controlnet_path = ModelInfo.get(controlnet_hash).local_path
+class Func_ControlNetLoader(Func):
+    def __init__(self, name="ControlNet Loader"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='controlnet_id', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='control_net', data_type='CONTROL_NET'),
+        )
+
+    def run(self, controlnet_id):
+        controlnet_path = ModelInfo.get(controlnet_id).local_path
         controlnet = comfy.controlnet.load_controlnet(controlnet_path)
-        return controlnet
+        return (controlnet,)
+
 
 class Func_ControlNetApply(Func):
-    def __init__(self, name="Apply ControlNet", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Apply ControlNet"):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='conditioning', data_type='CONDITIONING'),
+            IOInfo(name='control_net', data_type='CONTROL_NET'),
+            IOInfo(name='image', data_type='IMAGE'),
+            IOInfo(name='strength', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='cond', data_type='CONDITIONING'),
+        )
 
     def run(self, conditioning, control_net, image, strength):
         if strength == 0:
@@ -735,12 +948,12 @@ class Func_ControlNetApply(Func):
             n[1]['control'] = c_net
             n[1]['control_apply_to_uncond'] = True
             c.append(n)
-        return c
+        return (c,)
 
 
 class Func_ClipLoader(Func):
-    def __init__(self, name="CLIP Loader", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="CLIP Loader"):
+        super().__init__(name=name, )
 
     def run(self, clip_hash, type="stable_diffusion"):
         clip_path = ModelInfo.get(clip_hash).local_path
@@ -757,11 +970,12 @@ class Func_ClipLoader(Func):
 
         clip = comfy.sd.load_clip(ckpt_paths=[clip_path],
                                   embedding_directory=embedding_directories, clip_type=clip_type)
-        return clip
+        return (clip,)
+
 
 class Func_DualCLIPLoader(Func):
-    def __init__(self, name="Dual CLIP Loader", cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name="Dual CLIP Loader"):
+        super().__init__(name=name, )
 
     def run(self, clip_hash1, clip_hash2, type):
 
@@ -778,11 +992,12 @@ class Func_DualCLIPLoader(Func):
 
         clip = comfy.sd.load_clip(ckpt_paths=[clip_path1, clip_path2],
                                   embedding_directory=embedding_directories, clip_type=clip_type)
-        return clip
+        return (clip,)
+
 
 class Func_TripleCLIPLoader(Func):
-    def __init__(self, name='Triple CLIP Loader', cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name='Triple CLIP Loader'):
+        super().__init__(name=name, )
 
     def run(self, clip_hash1, clip_hash2, clip_hash3):
         clip_path1 = ModelInfo.get(clip_hash1).local_path
@@ -790,12 +1005,14 @@ class Func_TripleCLIPLoader(Func):
         clip_path3 = ModelInfo.get(clip_hash3).local_path
         embedding_directories = ModelDir.get_dirs('embedding')
 
-        clip = comfy.sd.load_clip(ckpt_paths=[clip_path1, clip_path2, clip_path3], embedding_directory=embedding_directories)
-        return clip
+        clip = comfy.sd.load_clip(ckpt_paths=[clip_path1, clip_path2, clip_path3],
+                                  embedding_directory=embedding_directories)
+        return (clip,)
+
 
 class Func_UNETLoader(Func):
-    def __init__(self, name='UNET Loader', cache_out=True, valid_inputs=True):
-        super().__init__(name=name, cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self, name='UNET Loader'):
+        super().__init__(name=name, )
 
     def run(self, unet_hash, weight_dtype):
         unet_path = ModelInfo.get(unet_hash).local_path
@@ -806,4 +1023,4 @@ class Func_UNETLoader(Func):
             model_options["dtype"] = torch.float8_e5m2
 
         model = comfy.sd.load_diffusion_model(unet_path, model_options=model_options)
-        return model
+        return (model,)

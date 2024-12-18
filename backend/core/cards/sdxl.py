@@ -1,25 +1,18 @@
-from typing import Callable
-
-import torch
-
-from core.abstracts import Card
+from core.abstracts.card import Card
 from core.comps import (
     Comp_CheckpointLoader,
     Comp_CLIPTextEncode,
     Comp_EmptyLatentImage,
-    Comp_KSamplerAdvanced
+    Comp_KSamplerAdvanced,
 )
-from core.funcs import (
-    Func_CLIPTextEncode,
-    Func_VAEDecode,
-    Func_SaveImage
-)
+from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SDXLCard(Card):
+    name = "SDXL-With-Refiner"
 
     meta_data = {
-        'name': "SDXL-With-Refiner",
+        'name': name,
         'display_name': "SDXL With Refiner",
         'describe': "SDXL With Refiner",
 
@@ -39,54 +32,50 @@ class SDXLCard(Card):
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/2410801d-f9a2-46f9-b5f0-17eefe008950/width=450/SDXL1Refiner.jpeg"
     }
 
-    def __init__(self, cache_out=True, valid_inputs=False):
-        super().__init__(cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self):
+        super().__init__()
 
-        self.load_checkpoint = Comp_CheckpointLoader(
+        load_checkpoint = Comp_CheckpointLoader(
             name='checkpoint',
             display_name="Load SDXL Base Checkpoint",
-            default_model_name='sd_xl_base_1.0.safetensors',
-            valid_inputs=valid_inputs
+            default_model='sd_xl_base_1.0.safetensors',
         )
-        self.register_comp(self.load_checkpoint)
+        model, clip, vae = self.register_func(load_checkpoint)
 
-        self.load_refiner = Comp_CheckpointLoader(
+        load_refiner = Comp_CheckpointLoader(
             name='refiner',
             display_name="Load SDXL Refiner Checkpoint",
-            default_model_name='sd_xl_refiner_1.0.safetensors',
-            valid_inputs=valid_inputs
+            default_model='sd_xl_refiner_1.0.safetensors',
         )
-        self.load_refiner.map_all_param_names_with_prefix('refiner_')
-        self.register_comp(self.load_refiner)
+        load_refiner.set_widget_param_names_prefix('refiner_')
+        refiner_model, refiner_clip, refiner_vae = self.register_func(load_refiner)
 
-        self.positive_prompt = Comp_CLIPTextEncode(
+        positive_prompt = Comp_CLIPTextEncode(
             name='positive_prompt',
             display_name='Prompt',
             default_value='evening sunset scenery blue sky nature, glass bottle with a galaxy in it',
-            valid_inputs=valid_inputs
         )
-        self.positive_prompt.map_param_name('text', 'positive_prompt')
-        self.register_comp(self.positive_prompt)
+        positive_prompt.change_param_name_and_display_name('text', 'positive_prompt', 'Prompt')
+        self.link(clip, positive_prompt.inputs.clip)
+        positive_cond = self.register_func(positive_prompt)
 
-        self.negative_prompt = Comp_CLIPTextEncode(
+        negative_prompt = Comp_CLIPTextEncode(
             name='negative_prompt',
             display_name='Negative Prompt',
             default_value='text, watermark',
-            valid_inputs=valid_inputs
         )
-        self.negative_prompt.map_param_name('text', 'negative_prompt')
-        self.register_comp(self.negative_prompt)
+        negative_prompt.change_param_name_and_display_name('text', 'negative_prompt', 'Negative Prompt')
+        self.link(clip, negative_prompt.inputs.clip)
+        negative_cond = self.register_func(negative_prompt)
 
-        self.encode_refiner_positive_prompt = Func_CLIPTextEncode()
-        self.encode_refiner_negative_prompt = Func_CLIPTextEncode()
-
-        self.empty_latent_image = Comp_EmptyLatentImage(
+        empty_latent_image = Comp_EmptyLatentImage(
+            name='latent image',
             width=1024,
-            height=1024
+            height=1024,
         )
-        self.register_comp(self.empty_latent_image)
+        latent = self.register_func(empty_latent_image)
 
-        self.k_sampler_advanced = Comp_KSamplerAdvanced(
+        k_sampler_advanced = Comp_KSamplerAdvanced(
             name="KSamplerAdvanced",
             display_name='Advanced KSampler',
             add_noise='enable',
@@ -99,10 +88,33 @@ class SDXLCard(Card):
             end_at_step=20,
             return_with_leftover_noise='enable',
         )
-        self.k_sampler_advanced.set_group_widgets(True)
-        self.register_comp(self.k_sampler_advanced)
+        self.link(model, k_sampler_advanced.inputs.model)
+        self.link(positive_cond, k_sampler_advanced.inputs.positive)
+        self.link(negative_cond, k_sampler_advanced.inputs.negative)
+        self.link(latent, k_sampler_advanced.inputs.latent_image)
+        latent = self.register_func(k_sampler_advanced)
 
-        self.k_sampler_refiner = Comp_KSamplerAdvanced(
+        # this will override positive_prompt, and make a final single positive_prompt
+        refiner_positive_prompt = Comp_CLIPTextEncode(
+            name='positive_prompt',
+            display_name='Prompt',
+            default_value='evening sunset scenery blue sky nature, glass bottle with a galaxy in it',
+        )
+        refiner_positive_prompt.change_param_name_and_display_name('text', 'positive_prompt', 'Prompt')
+        self.link(refiner_clip, refiner_positive_prompt.inputs.clip)
+        refiner_positive_cond = self.register_func(refiner_positive_prompt)
+
+        # this will override negative_prompt, and make a final single negative_prompt
+        refiner_negative_prompt = Comp_CLIPTextEncode(
+            name='negative_prompt',
+            display_name='Negative Prompt',
+            default_value='text, watermark',
+        )
+        refiner_negative_prompt.change_param_name_and_display_name('text', 'negative_prompt', 'Negative Prompt')
+        self.link(refiner_clip, refiner_negative_prompt.inputs.clip)
+        refiner_negative_cond = self.register_func(refiner_negative_prompt)
+
+        k_sampler_refiner = Comp_KSamplerAdvanced(
             name="RefinerKSamplerAdvanced",
             display_name='Refiner Advanced KSampler',
             add_noise='disable',
@@ -115,90 +127,18 @@ class SDXLCard(Card):
             end_at_step=10000,
             return_with_leftover_noise='disable',
         )
-        self.k_sampler_refiner.set_group_widgets(True)
-        self.k_sampler_refiner.map_all_param_names_with_prefix("refiner_")
-        self.register_comp(self.k_sampler_refiner)
+        k_sampler_refiner.set_widget_param_names_prefix("refiner_")
+        self.link(refiner_model, k_sampler_refiner.inputs.model)
+        self.link(refiner_positive_cond, k_sampler_refiner.inputs.positive)
+        self.link(refiner_negative_cond, k_sampler_refiner.inputs.negative)
+        self.link(latent, k_sampler_refiner.inputs.latent_image)
+        refiner_latent = self.register_func(k_sampler_refiner)
 
-        self.vae_decode = Func_VAEDecode(valid_inputs=valid_inputs)
-        self.save_image = Func_SaveImage(valid_inputs=valid_inputs)
+        vae_decode = Func_VAEDecode('vae decoder')
+        self.link(refiner_latent, vae_decode.inputs.samples)
+        self.link(refiner_vae, vae_decode.inputs.vae)
+        pixel_samples = self.register_func(vae_decode)
 
-    def run(self,
-            base_inputs: dict,
-            addon_inputs: dict,
-            valid_func_inputs: bool = False,
-            progress_callback: Callable = None
-            ):
-        with torch.inference_mode():
-            checkpoint_info = base_inputs.get('checkpoint')
-            model, clip, _ = self.load_checkpoint(
-                checkpoint_hash=checkpoint_info.get('sha_256')
-            )
-
-            refiner_checkpoint_info = base_inputs.get('refiner_checkpoint')
-            refiner_model, refiner_clip, refiner_vae = self.load_checkpoint(
-                checkpoint_hash=refiner_checkpoint_info.get('sha_256')
-            )
-
-            positive_prompt = base_inputs.get('positive_prompt')
-            negative_prompt = base_inputs.get('negative_prompt')
-
-            positive_cond = self.positive_prompt(clip=clip, text=positive_prompt)
-            negative_cond = self.negative_prompt(clip=clip, text=negative_prompt)
-
-            latent_image = self.empty_latent_image(
-                width=base_inputs.get('width'),
-                height=base_inputs.get('height'),
-            )
-
-            sd_progress_callback = self.get_progress_callback('sd_progress_callback')
-            latent_image = self.k_sampler_advanced(
-                model=model,
-                add_noise=base_inputs.get('add_noise'),
-                noise_seed=base_inputs.get('noise_seed'),
-                steps=base_inputs.get('steps'),
-                cfg_scale=base_inputs.get('cfg_scale'),
-                sampler_name=base_inputs.get('sampler_name'),
-                scheduler=base_inputs.get('scheduler'),
-                positive=positive_cond,
-                negative=negative_cond,
-                latent_image=latent_image,
-                start_at_step=base_inputs.get('start_at_step'),
-                end_at_step=base_inputs.get('end_at_step'),
-                return_with_leftover_noise=base_inputs.get('return_with_leftover_noise'),
-                denoise=1.0,
-                callback=sd_progress_callback
-            )
-
-            refiner_positive_cond = self.encode_refiner_positive_prompt(clip=refiner_clip, text=positive_prompt)
-            refiner_negative_cond = self.encode_refiner_negative_prompt(clip=refiner_clip, text=negative_prompt)
-            refiner_latent_image = self.k_sampler_refiner(
-                model=refiner_model,
-                add_noise=base_inputs.get('refiner_add_noise'),
-                noise_seed=base_inputs.get('refiner_noise_seed'),
-                steps=base_inputs.get('refiner_steps'),
-                cfg_scale=base_inputs.get('refiner_cfg_scale'),
-                sampler_name=base_inputs.get('refiner_sampler_name'),
-                scheduler=base_inputs.get('refiner_scheduler'),
-                positive=refiner_positive_cond,
-                negative=refiner_negative_cond,
-                latent_image=latent_image,
-                start_at_step=base_inputs.get('refiner_start_at_step'),
-                end_at_step=base_inputs.get('refiner_end_at_step'),
-                return_with_leftover_noise=base_inputs.get('refiner_return_with_leftover_noise'),
-                denoise=1.0,
-                callback=sd_progress_callback
-            )
-
-            pixel_samples = self.vae_decode(vae=refiner_vae, samples=refiner_latent_image)
-
-            result = self.save_image(
-                images=pixel_samples,
-                card_name=self.card_inputs_info.get('card_name'),
-                inputs_info=base_inputs,
-                addon_inputs_info=addon_inputs
-            )
-
-            return {
-                'result': result
-            }
-
+        save_image = Func_SaveImage('save image')
+        self.link(pixel_samples, save_image.inputs.images)
+        _ = self.register_func(save_image)

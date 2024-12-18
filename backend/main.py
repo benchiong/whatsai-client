@@ -2,7 +2,6 @@ import asyncio
 import threading
 
 import uvicorn
-import core.addons  # don't remove it, for early load.
 from data_type.init import initialize_dbs
 from misc.logger import Logger
 from misc.arg_parser import is_prod, host, port
@@ -12,7 +11,6 @@ from misc.whatsai_dirs import init_file_paths
 
 
 def start_server():
-
     if is_prod:
         from server.server import app
         uvicorn.run(app, host=host, port=port)
@@ -22,13 +20,14 @@ def start_server():
         """ Warning: when you want debug prompt queue/worker, manually set reload=False, otherwise fastapi will start
             a SpawnProcess, which won't work between processes, make queue/worker no response.
         """
-        uvicorn.run("server.server:app", host=host, port=port, reload=True, log_level="info")
+        uvicorn.run("server.server:app", host=host, port=port, reload=False, log_level="info")
         Logger.init_config()
 
 
 def start_prompt_worker():
     loop = asyncio.new_event_loop()
     threading.Thread(target=PromptWorker.run, daemon=True, args=(loop,)).start()
+
 
 def start_download_worker():
     loop = asyncio.new_event_loop()

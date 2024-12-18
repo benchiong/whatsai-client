@@ -90,6 +90,7 @@ class ModelInfo(PyDBModel):
             if not self.id:
                 self.id = cur.lastrowid
             conn.commit()
+
     @classmethod
     def get(cls, id_or_file_name_or_hash_or_file_path, with_civitai_model_info=False):
         conn = cls.conn()
@@ -108,7 +109,7 @@ class ModelInfo(PyDBModel):
                     id_or_file_name_or_hash_or_file_path,
                     id_or_file_name_or_hash_or_file_path,
                     id_or_file_name_or_hash_or_file_path
-                 )
+                )
             )
             row = cur.fetchone()
             if row is None:
@@ -170,7 +171,7 @@ class ModelInfo(PyDBModel):
             return [cls.from_row(row, civit_model_info=None) for row in rows]
 
     @classmethod
-    def get_model_infos(cls, model_type, base_model=None):
+    def get_model_infos(cls, model_type, base_model=None, with_civitai_model_info=True):
         query = "SELECT * FROM model_info WHERE model_type = ? ORDER BY created_time_stamp desc ", (model_type,)
         if base_model:
             query = """ 
@@ -186,7 +187,12 @@ class ModelInfo(PyDBModel):
 
         model_infos = []
         for row in rows:
-            model_infos.append(cls.from_row(row, civit_model_info=None))
+            if with_civitai_model_info:
+                civit_model_info = CivitaiModelVersion.get(row[6])
+            else:
+                civit_model_info = None
+
+            model_infos.append(cls.from_row(row, civit_model_info=civit_model_info))
         return model_infos
 
     @classmethod
@@ -214,7 +220,8 @@ class ModelInfo(PyDBModel):
         conn = cls.conn()
         with closing(conn.cursor()) as cur:
             cur.execute(
-                "SELECT * FROM model_info WHERE model_type = ? AND file_name LIKE ? ORDER BY created_time_stamp desc ", ('vae-approx', "tae%")
+                "SELECT * FROM model_info WHERE model_type = ? AND file_name LIKE ? ORDER BY created_time_stamp desc ",
+                ('vae-approx', "tae%")
             )
             rows = cur.fetchall()
 
@@ -278,8 +285,3 @@ class ModelInfo(PyDBModel):
             civit_model=civit_model_info
         )
         return model_info
-
-
-
-
-

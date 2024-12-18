@@ -1,23 +1,26 @@
 from pathlib import Path
 
-from core.abstracts import Widget
+from core.abstracts.widget import Widget
 from data_type.whatsai_model_info import ModelInfo
 from misc.helpers import file_type_guess
 from core.extras import tae_model_info_list
 
+
 class TextWidget(Widget):
-    def __init__(self,  display_name, param_name, default_value=None):
+    def __init__(self, display_name, param_name, default_value=None):
         super().__init__(
             param_name=param_name,
             display_name=display_name,
             default_value=default_value,
             value_type=str,
         )
+
     def valid_input(self, param_value) -> str | None:
         return None
 
+
 class IntWidget(Widget):
-    def __init__(self,  display_name, param_name, min, max, step, default_value=None):
+    def __init__(self, display_name, param_name, min, max, step, default_value=None):
         super().__init__(
             param_name=param_name,
             display_name=display_name,
@@ -33,21 +36,23 @@ class IntWidget(Widget):
             return None
 
         if param_value < self.min:
-            return "Value: {} of param: {} must greater than min value: {}".format(param_value, self.param_name, self.min)
+            return f"Value: {param_value} of param: {self.param_name} must greater than min value: {self.min}, {str(self)}"
+
         if param_value > self.max:
-            return "Value: {} of param: {} must less than min value: {}".format(param_value, self.param_name, self.max)
+            return f"Value: {param_value} of param: {self.param_name} must less than min value: {self.max}, {str(self)}"
         return None
 
     @property
-    def dict(self):
+    def info(self):
         return {
-            **super().dict,
+            **super().info,
             **{
                 'min': self.min,
                 'max': self.max,
                 'step': self.step,
             }
         }
+
 
 class FloatWidget(Widget):
     def __init__(self, display_name, param_name, min, max, step, round, default_value=None):
@@ -67,15 +72,19 @@ class FloatWidget(Widget):
             return None
 
         if param_value < self.min:
-            return "Value: {} of param: {} must greater than min value: {}".format(param_value, self.param_name, self.min)
+            return "Value: {} of param: {} must greater than min value: {}, {}".format(
+                param_value, self.param_name, self.min, str(self)
+            )
         if param_value > self.max:
-            return "Value: {} of param: {} must less than min value: {}".format(param_value, self.param_name, self.max)
+            return "Value: {} of param: {} must less than min value: {}, {}".format(
+                param_value, self.param_name, self.max, str(self)
+            )
         return None
 
     @property
-    def dict(self):
+    def info(self):
         return {
-            **super().dict,
+            **super().info,
             **{
                 'min': self.min,
                 'max': self.max,
@@ -83,6 +92,7 @@ class FloatWidget(Widget):
                 'round': self.round
             }
         }
+
 
 class SeedWidget(Widget):
     def __init__(self, display_name, param_name, max=0xffffffffffffffff, default_value=None):
@@ -99,22 +109,23 @@ class SeedWidget(Widget):
             return None
 
         if param_value > self.max:
-            return "Seed value: {} must less than min value: {}".format(param_value, self.max)
+            return "Seed value: {} must less than min value: {}, {}".format(param_value, self.max, str(self))
         if param_value < -1:
             return "Seed Value can only be -1."
         return None
 
     @property
-    def dict(self):
+    def info(self):
         return {
-            **super().dict,
+            **super().info,
             **{
                 'max': int(self.max),
             }
         }
 
+
 class ComboWidget(Widget):
-    def __init__(self,  display_name, param_name, values, value_type=str, default_value=None):
+    def __init__(self, display_name, param_name, values, value_type=str, default_value=None):
 
         if not default_value and values:
             default_value = values[0]
@@ -134,22 +145,26 @@ class ComboWidget(Widget):
         if param_value in self.values:
             return None
         else:
-            return "Value: {} of param {}:  not in Combo values: {}".format(param_value,self.param_name, self.values)
+            return "Value: {} of param {}:  not in Combo values: {}, {}".format(param_value, self.param_name,
+                                                                                self.values, str(self))
 
     @property
-    def dict(self):
+    def info(self):
         return {
-            **super().dict,
+            **super().info,
             **{
                 'values': self.values,
             }
         }
 
+
 class WidgetFunctionNotFoundException(Exception):
     pass
 
+
 class EmptyComboValuesException(Exception):
     pass
+
 
 class DynamicComboWidget(ComboWidget):
     def __init__(self,
@@ -179,17 +194,18 @@ class DynamicComboWidget(ComboWidget):
         return None
 
     @property
-    def dict(self):
+    def info(self):
         return {
-            **super().dict,
+            **super().info,
             **{
                 'values_function_name': self.values_function_name,
                 'values_function_params': self.values_function_params
             }
         }
 
+
 class ModelComboWidget(DynamicComboWidget):
-    def __init__(self,  display_name, param_name, values_function_name, default_value, values_function_params=None):
+    def __init__(self, display_name, param_name, values_function_name, default_value, values_function_params=None):
         super().__init__(
             param_name=param_name,
             display_name=display_name,
@@ -199,28 +215,28 @@ class ModelComboWidget(DynamicComboWidget):
             value_type=ModelInfo  # we don't verify it, so it's ok here.
         )
 
-        #todo: fix values_function_params UI and deal logic
+        # todo: fix values_function_params UI and deal logic
 
     @property
-    def dict(self):
+    def info(self):
         return {
-            **super().dict,
+            **super().info,
             **{
                 'value': self.value,
             }
         }
 
     def valid_input(self, param_value) -> str | None:
-        return None
+        model_info = ModelInfo.get(param_value)
+        if not model_info:
+            return f"Model file: {param_value} not found, {str(self)}."
 
-    @property
-    def default_value_info(self):
-        return {
-            'checkpoint': {
-                'model_name': self.value.get('file_name') if self.value else None,
-                'sha_256': self.value.get('sha_256') if self.value else None
-            }
-        }
+        local_path = model_info.local_path
+        if not local_path or not Path(local_path).exists():
+            return f"Model file not found: {local_path} of model: {param_value}"
+        else:
+            return None
+
 
 class FileWidget(Widget):
     def __init__(self, param_name, display_name="File Select", value_type=str, default_value=None):
@@ -245,6 +261,7 @@ class FileWidget(Widget):
 
         return None
 
+
 class ImageWidget(FileWidget):
     def __init__(self, param_name, display_name="Image Select", value_type=str, default_value=None):
         super().__init__(
@@ -262,7 +279,8 @@ class ImageWidget(FileWidget):
         if mime.startswith('image'):
             return None
         else:
-            return "File type: {} mismatch, image expected.".format(mime)
+            return "File type: {} mismatch, image expected, {}".format(mime, str(self))
+
 
 class VideoWidget(FileWidget):
     def __init__(self, param_name, display_name="Image Select", value_type=str, default_value=None):
@@ -281,7 +299,7 @@ class VideoWidget(FileWidget):
         if mime.startswith('video'):
             return None
         else:
-            return "File type: {} mismatch, video expected.".format(mime)
+            return "File type: {} mismatch, video expected, {}.".format(mime, str(self))
 
 
 class AudioWidget(FileWidget):
@@ -301,12 +319,14 @@ class AudioWidget(FileWidget):
         if mime.startswith('audio'):
             return None
         else:
-            return "File type: {} mismatch, audio expected.".format(mime)
+            return "File type: {} mismatch, audio expected, {}.".format(mime, str(self))
+
 
 class GroupedWidgets(Widget):
     """ It exists in logic, but not used, Comp do the creation thing.
         See core.abstracts.comp.Comp.widgets_dict_grouped_widgets_considered for detail
      """
+
     def __init__(self, display_name, widgets, param_name, default_value, value_type):
         super().__init__(param_name, display_name, default_value, value_type)
 
@@ -316,6 +336,7 @@ class GroupedWidgets(Widget):
 
 def list_checkpoints(base_model: str | None = None):
     return ModelInfo.get_model_infos(model_type='checkpoint')
+
 
 def list_loras(base_model: str | None = None):
     return ModelInfo.get_model_infos(model_type='lora')
@@ -328,6 +349,7 @@ def list_vaes(approx_vaes: bool = True, base_model: str | None = None):
         vaes.extend(taesd_list)
 
     return vaes
+
 
 def list_hypernets(base_model: str | None = None):
     return ModelInfo.get_model_infos(model_type='hypernet')

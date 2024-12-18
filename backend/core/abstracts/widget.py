@@ -1,5 +1,9 @@
+import traceback
 from abc import ABC, abstractmethod
 from typing import Type
+
+from misc.logger import logger
+
 
 class Widget(ABC):
     """ One widget for one param value, make it be the smallest unit. Take it as the bridge of frontend and backend. """
@@ -11,6 +15,7 @@ class Widget(ABC):
         self.value_type = value_type
         self.optional = optional
 
+        # todo: make sure we need them, remove if don't.
         self._origin_to_new_param_name_map = {}
         self._current_to_origin_param_name_map = {}
 
@@ -19,7 +24,7 @@ class Widget(ABC):
 
     @abstractmethod
     def valid_input(self, param_value) -> str | None:
-        """ Used to valid the values from frontend, and transform them to the right value type.
+        """ Used to valid the values from frontend.
             :param param_value: value of the param.
             :return: error info if fails else None.
         """
@@ -39,37 +44,29 @@ class Widget(ABC):
         try:
             if param_value == 'None' or param_value is None:
                 return None
+
             if self.value_type in [int, str, bool, float]:
                 return self.value_type(param_value)
             else:
                 return param_value
+
         except Exception as e:
+            logger.debug(f"make_type_right error: {e}")
+            traceback.print_exc()
+
             return param_value
 
     @property
-    def dict(self):
+    def info(self):
         """ Used to tell frontend how to render UI by backend. """
-        param_name = self.param_name
-        if self.param_name in self._origin_to_new_param_name_map:
-            param_name = self._origin_to_new_param_name_map.get(param_name)
+
         return {
-            # 'widget_name': self.widget_name,
             'display_name': self.display_name,
-            'param_name': param_name,
+            'param_name': self.param_name,
             'value': self.value,
             'optional': self.optional,
             'widget_type': self.__class__.__name__,
         }
 
-    @property
-    def default_value_info(self):
-        return {}
-
-    def map_param_name(self, origin_param_name, new_param_name):
-        """ We need this when the upstream(Card/Addon) want a different param name, especially they have
-            multiple comps in one object to distinguish parameters.
-        """
-        assert origin_param_name == self.param_name, (
-            'Param name: {} not match widget param name. '.format(origin_param_name))
-        self._origin_to_new_param_name_map[origin_param_name] = new_param_name
-        self._current_to_origin_param_name_map[new_param_name] = origin_param_name
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self.param_name}:{self.value} in type:{self.value_type}"

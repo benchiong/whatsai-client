@@ -15,12 +15,13 @@ from data_type.whatsai_model_type import ModelType
 from data_type.base import PydanticModel
 from misc.helpers_civitai import download_civitai_image_to_whatsai_file_dir
 
-
 router = APIRouter()
+
 
 @router.get('/get_all_model_types')
 async def get_all_model_types():
     return ModelType.get_all_model_types()
+
 
 @router.get('/model_infos_by_type')
 async def model_infos_by_type(
@@ -33,8 +34,10 @@ async def model_infos_by_type(
         return ModelInfo.get_all()
     return ModelInfo.get_model_infos(model_type=model_type)
 
+
 class SyncModelInfosReq(PydanticModel):
     model_type: Optional[str] = None
+
 
 @router.post('/sync_model_infos')
 async def sync_model_infos(req: SyncModelInfosReq):
@@ -47,8 +50,10 @@ async def sync_model_infos(req: SyncModelInfosReq):
         submit_model_info_sync_task(model_info)
     return model_infos
 
+
 class SyncSingeModelInfoReq(PydanticModel):
     model_file_path: str
+
 
 @router.post('/sync_single_model_info')
 async def sync_single_model_info(req: SyncSingeModelInfoReq):
@@ -81,18 +86,27 @@ async def get_all_models(sort_type: SortType = 'created_reverse'):
         list_results.append({k: sorted_v})
     return list_results
 
+
+@router.get('/get_model_by_model_id')
+async def get_model_by_local_path(model_id: str):
+    return ModelInfo.get(model_id, with_civitai_model_info=True)
+
+
 @router.get('/get_model_by_local_path')
 async def get_model_by_local_path(local_path: str):
     return ModelInfo.get(local_path, with_civitai_model_info=True)
+
 
 class DownloadCivitAIModelReq(PydanticModel):
     civitai_model_version: CivitaiModelVersion
     files_to_download: list[CivitaiFileToDownload]
     image_to_download: Optional[str]
 
+
 @router.get('/get_downloading_models')
 async def get_downloading_models():
     return ModelDownloadTask.get_downloading_model_info_in_tasks()
+
 
 @router.post('/download_civitai_model')
 async def download_civitai_model(req: DownloadCivitAIModelReq):
@@ -108,10 +122,12 @@ async def download_civitai_model(req: DownloadCivitAIModelReq):
 
     submit_model_download_task(civitai_model_version, files_to_download, downloaded_image_path)
 
+
 class OtherUIReq(PydanticModel):
     ui_name: str
     ui_dir: str
     set_as_default: bool = False
+
 
 @router.post('/model_dir/add_other_ui_model_paths')
 async def add_other_ui_model_paths_(req: OtherUIReq):
@@ -139,6 +155,7 @@ async def add_other_ui_model_paths_(req: OtherUIReq):
         'info': info
     }
 
+
 @router.get('/model_dir/get_other_ui_model_paths_map')
 async def get_other_ui_model_paths_map(ui_name: str):
     if ui_name.lower() == 'webui':
@@ -151,10 +168,12 @@ async def get_other_ui_model_paths_map(ui_name: str):
 async def model_dir(model_type: str):
     return ModelDir.get(model_type)
 
+
 class AddModelDirRequest(PydanticModel):
     model_type: str
     model_dir: str
     set_as_default: bool = False
+
 
 @router.post('/model_dir/add_model_dir')
 async def add_model_dir(req: AddModelDirRequest):
@@ -177,6 +196,7 @@ async def add_model_dir(req: AddModelDirRequest):
         'record': model_dir_obj
     }
 
+
 def add_model_infos_in_dir(model_type, model_dir):
     model_files_in_dir = get_model_files_in_dir(model_dir)
     ModelInfo.add_with_many_local_paths(model_files_in_dir, model_type)
@@ -184,9 +204,11 @@ def add_model_infos_in_dir(model_type, model_dir):
     for model_info in model_infos_to_sync:
         submit_model_info_sync_task(model_info)
 
+
 class RemoveModelDirRequest(PydanticModel):
     model_type: str
     model_dir: str
+
 
 @router.post('/model_dir/remove_model_dir')
 async def remove_model_dir(req: RemoveModelDirRequest):
@@ -206,9 +228,11 @@ async def remove_model_dir(req: RemoveModelDirRequest):
         'record': None
     }
 
+
 class SetDefaultModelDirRequest(PydanticModel):
     model_type: str
     model_dir: str
+
 
 @router.post('/model_dir/set_default_model_dir')
 async def set_default_model_dir(req: SetDefaultModelDirRequest):
@@ -225,7 +249,3 @@ async def set_default_model_dir(req: SetDefaultModelDirRequest):
         'error_info': error_info,
         'record': record
     }
-
-
-
-

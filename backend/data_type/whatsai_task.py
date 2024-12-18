@@ -8,6 +8,8 @@ from data_type.base_data_model import PyDBModel
 from misc.helpers import get_now_timestamp_and_str
 
 ModelTypeLiteral = Literal['system', 'custom']
+
+
 class TaskStatus(Enum):
     queued = 'queued'
     processing = 'processing'
@@ -15,8 +17,8 @@ class TaskStatus(Enum):
     failed = 'failed'
     done = 'done'
 
-class Task(PyDBModel):
 
+class Task(PyDBModel):
     client_id: str
     status: str
     card_name: str
@@ -180,6 +182,6 @@ class Task(PyDBModel):
         conn = cls.conn()
         with closing(conn.cursor()) as cur:
             cur.execute(
-                "DELETE FROM prompt_task WHERE id = ? ", (id)
+                "DELETE FROM prompt_task WHERE id = ? ", (id,)
             )
             conn.commit()

@@ -1,8 +1,6 @@
-from typing import Callable
-
-import torch
-
-from core.abstracts import Card
+from core.abstracts.addon import AddonOutputToReplace, AddonInputToLink
+from core.addons import Addon_Vae, Addon_LoRA, Addon_Hypernet, Addon_ControlNet, Addon_Upscale
+from core.abstracts.card import Card
 from core.comps import (
     Comp_CheckpointLoader,
     Comp_CLIPTextEncode,
@@ -14,10 +12,10 @@ from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SDT2ICard(Card):
-
+    name = "Stable-Diffusion-Text-to-Image"
     meta_data = {
-        'name': "Stable-Diffusion-Text-to-Image",
-        'display_name': "Stable Diffusion Text-to-Image",
+        'name': name,
+        'display_name': "TEST-Stable Diffusion Text-to-Image",
         'describe': "Text-to-Image with Stable diffusion.",
         "pre_models": [
             {
@@ -28,147 +26,107 @@ class SDT2ICard(Card):
         "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/0efc4253-57cc-444d-a501-2bfd0cf86697/width=450/00000-2585056719.jpeg"
     }
 
-    def __init__(self, cache_out=True, valid_inputs=False):
-        super().__init__(cache_out=cache_out, valid_inputs=valid_inputs)
+    def __init__(self):
+        super().__init__()
 
-        self.load_checkpoint = Comp_CheckpointLoader(
+        load_checkpoint = Comp_CheckpointLoader(
             name='checkpoint',
-            default_model_name='v1-5-pruned-emaonly.safetensors',
-            valid_inputs=valid_inputs
+            default_model='v1-5-pruned-emaonly.safetensors'
         )
-        self.register_comp(self.load_checkpoint)
+        model, clip, vae = self.register_func(load_checkpoint)
 
-        self.positive_prompt = Comp_CLIPTextEncode(
+        clip_skip = Comp_CLIPSetLastLayer(name='clip_skip')
+        self.link(clip, clip_skip.inputs.clip)
+        clip = self.register_func(clip_skip)
+
+        positive_prompt = Comp_CLIPTextEncode(
             name='positive_prompt',
-            display_name='Prompt',
             default_value='beautiful scenery nature glass bottle landscape, , purple galaxy bottle,',
-            valid_inputs=valid_inputs
         )
-        self.positive_prompt.map_param_name('text', 'positive_prompt')
-        self.register_comp(self.positive_prompt)
+        positive_prompt.change_param_name_and_display_name('text', 'positive_prompt', 'Prompt')
+        self.link(clip, positive_prompt.inputs.clip)
+        positive_cond = self.register_func(positive_prompt)
 
-        self.negative_prompt = Comp_CLIPTextEncode(
+        negative_prompt = Comp_CLIPTextEncode(
             name='negative_prompt',
-            display_name='Negative Prompt',
             default_value='text, watermark',
-            valid_inputs=valid_inputs
         )
-        self.negative_prompt.map_param_name('text', 'negative_prompt')
-        self.register_comp(self.negative_prompt)
+        negative_prompt.change_param_name_and_display_name('text', 'negative_prompt', 'Negative Prompt')
+        self.link(clip, negative_prompt.inputs.clip)
+        negative_cond = self.register_func(negative_prompt)
 
-        self.empty_latent_image = Comp_EmptyLatentImage()
-        self.empty_latent_image.set_optional(True)
-        self.register_comp(self.empty_latent_image)
+        empty_latent_image = Comp_EmptyLatentImage(name='latent image')
+        latent = self.register_func(empty_latent_image)
 
-        self.clip_skip = Comp_CLIPSetLastLayer(
-            valid_inputs=valid_inputs
+        k_sampler = Comp_KSampler(name='ksampler')
+        self.link(model, k_sampler.inputs.model)
+        self.link(positive_cond, k_sampler.inputs.positive)
+        self.link(negative_cond, k_sampler.inputs.negative)
+        self.link(latent, k_sampler.inputs.latent_image)
+        latent = self.register_func(k_sampler)
+
+        vae_decode = Func_VAEDecode('vae decoder')
+        self.link(latent, vae_decode.inputs.samples)
+        self.link(vae, vae_decode.inputs.vae)
+        pixel_samples = self.register_func(vae_decode)
+
+        save_image = Func_SaveImage('save image')
+        self.link(pixel_samples, save_image.inputs.images)
+        _ = self.register_func(save_image)
+
+        ###  LoRA
+        lora_addon = Addon_LoRA()
+        lora_addon.set_outputs_to_replace(
+            AddonOutputToReplace(func_name='checkpoint', func_output_name='model', addon_output_name='model'),
+            AddonOutputToReplace(func_name='checkpoint', func_output_name='clip', addon_output_name='clip'),
         )
-        self.register_comp(self.clip_skip)
+        lora_addon.set_inputs_to_link(
+            AddonInputToLink(addon_input_name='model', func_name='checkpoint', func_output_name='model'),
+            AddonInputToLink(addon_input_name='clip', func_name='checkpoint', func_output_name='clip'),
+        )
+        self.add_supported_addon(lora_addon)
 
-        self.k_sampler = Comp_KSampler()
-        self.register_comp(self.k_sampler)
+        ###  Hypernet
+        hypernet_addon = Addon_Hypernet()
+        hypernet_addon.set_outputs_to_replace(
+            AddonOutputToReplace(func_name='checkpoint', func_output_name='model', addon_output_name='model'),
+        )
+        hypernet_addon.set_inputs_to_link(
+            AddonInputToLink(addon_input_name='model', func_name='checkpoint', func_output_name='model'),
+        )
+        self.add_supported_addon(hypernet_addon)
 
-        self.vae_decode = Func_VAEDecode(valid_inputs=valid_inputs)
-        self.save_image = Func_SaveImage(valid_inputs=valid_inputs)
+        ###  Vae
+        vae_addon = Addon_Vae()
+        vae_addon.set_outputs_to_replace(
+            AddonOutputToReplace(func_name='checkpoint', func_output_name='vae', addon_output_name='vae'),
+        )
+        self.add_supported_addon(vae_addon)
 
-        self.support_addon_types = ['Vae', 'LoRA', 'Hypernet', 'HiresFix', 'Upscale', 'Controlnet']
-        self.init_supported_addons(['Vae', 'LoRA', 'Hypernet', 'HiresFix', 'Upscale', 'Controlnet'])
+        ###  ControlNet
+        controlnet_addon = Addon_ControlNet()
+        controlnet_addon.set_outputs_to_replace(
+            AddonOutputToReplace(func_name='positive_prompt', func_output_name='cond', addon_output_name='cond'),
+        )
+        controlnet_addon.set_inputs_to_link(
+            AddonInputToLink(addon_input_name='conditioning', func_name='positive_prompt', func_output_name='cond'),
+        )
+        self.add_supported_addon(controlnet_addon)
 
-    def run(self,
-            base_inputs: dict,
-            addon_inputs: dict,
-            valid_func_inputs: bool = False,
-            progress_callback: Callable = None
-            ):
+        ### Upscale
+        upscale_addon = Addon_Upscale()
+        upscale_addon.set_outputs_to_replace(
+            AddonOutputToReplace(func_name='vae decoder', func_output_name='image', addon_output_name='image'),
+        )
+        upscale_addon.set_inputs_to_link(
+            AddonInputToLink(addon_input_name='image', func_name='vae decoder', func_output_name='image'),
+        )
+        self.add_supported_addon(upscale_addon)
 
-        addon_vae = self.addons.get('Vae')
-        addon_lora = self.addons.get('LoRA')
-        addon_hypernet = self.addons.get('Hypernet')
-        addon_hires_fix = self.addons.get('Hires Fix')
-        addon_Upscale = self.addons.get('Upscale')
-        addon_ControlNet = self.addons.get('ControlNet')
-
-        with torch.inference_mode():
-            checkpoint_info = base_inputs.get('checkpoint')
-
-            model, clip, vae = self.load_checkpoint(
-                checkpoint_hash=checkpoint_info.get('sha_256')
-            )
-
-            if addon_vae and addon_inputs.get('Vae'):
-                vae = addon_vae()
-
-            if addon_hypernet and addon_inputs.get('Hypernet'):
-                model = addon_hypernet(model)
-
-            if addon_lora and addon_inputs.get('LoRA'):
-                model, clip = addon_lora(model, clip)
-
-            clip = self.clip_skip(clip=clip, clip_skip=base_inputs.get('clip_skip'))
-
-            positive_cond = self.positive_prompt(clip=clip, text=base_inputs.get('positive_prompt'))
-            if addon_ControlNet and addon_inputs.get('ControlNet'):
-                positive_cond = addon_ControlNet(positive_cond)
-
-            negative_cond = self.negative_prompt(clip=clip, text=base_inputs.get('negative_prompt'))
-
-            latent_image = self.empty_latent_image(
-                width=base_inputs.get('width'),
-                height=base_inputs.get('height'),
-            )
-
-            sd_progress_callback = self.get_progress_callback('sd_progress_callback')
-            latent_image = self.k_sampler(
-                model=model,
-                latent_image=latent_image,
-                positive=positive_cond,
-                negative=negative_cond,
-                seed=base_inputs.get('seed'),
-                steps=base_inputs.get('steps'),
-                cfg_scale=base_inputs.get('cfg_scale'),
-                denoise=base_inputs.get('denoise'),
-                sampler_name=base_inputs.get('sampler_name'),
-                scheduler_name=base_inputs.get('scheduler_name'),
-                callback=sd_progress_callback
-            )
-
-            pixel_samples = self.vae_decode(vae=vae, samples=latent_image)
-
-            if addon_Upscale and addon_inputs.get('Upscale'):
-                pixel_samples = addon_Upscale(
-                    image=pixel_samples
-                )
-
-            result = self.save_image(
-                images=pixel_samples,
-                card_name=self.name,
-                inputs_info=base_inputs,
-                addon_inputs_info=addon_inputs
-            )
-
-            if addon_hires_fix and addon_inputs.get('Hires Fix'):
-                sd_hires_fix_callback = self.get_progress_callback('sd_hires_fix_callback')
-                meta_info = {
-                    'width': addon_inputs.get('Hires Fix')[0].get('width'),
-                    'height': addon_inputs.get('Hires Fix')[0].get('height')
-                }
-                hires_fix_result = addon_hires_fix(
-                    samples=latent_image,
-                    model=model,
-                    vae=vae,
-                    positive=positive_cond,
-                    negative=negative_cond,
-                    callback=sd_hires_fix_callback,
-                    card_info=self.card_inputs_info,
-                    inputs_info=base_inputs,
-                    addon_inputs_info=addon_inputs,
-                    meta_info=meta_info
-                )
-                return {
-                    'result': result,
-                    'hires_fix_result': hires_fix_result
-                }
-
-            return {
-                'result': result
-            }
+        self.set_addon_positions({
+            'Vae': 'checkpoint',
+            'LoRA': 'checkpoint',
+            'Hypernet': 'checkpoint',
+            'Controlnet': 'positive_prompt',
+            'Upscale': 'vae decoder',
+        })

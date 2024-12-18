@@ -1,9 +1,9 @@
-from abc import abstractmethod
-
+from misc.logger import logger
+from .cache import OutputsCache
 from .widget import Widget
-from .func import Func
+from .func import Func, FuncPos, Link, FuncOutput, FuncInput
 
-COMP_CLASS_MAP = {}
+
 class Comp(Func):
     """ Comp, short for Compose or Component,
         when taking as Compose, means Compose of Widgets and Funcs
@@ -13,89 +13,59 @@ class Comp(Func):
         Func, Comp should be treated as the smallest unit's of Card and Addon.
     """
 
-    def __init__(self, name=None, display_name=None, cache_out=True, valid_inputs=True):
+    def __init__(self, name=None, display_name=None, optional=False, grouped_widgets=False):
         """ Subclass should create and add widgets and funcs here, the order of widgets to register matters. """
-        super().__init__(cache_out, valid_inputs)
 
-        self._name = name
-        self._display_name = display_name
-        self._widgets: dict[str: Widget] = {}  # { param_name: widget }
-        self.funcs: dict[str: Func] = {}  # { func_name, func }
+        super().__init__(name)
 
-        self._origin_to_new_param_name_map = {}
-        self._current_to_origin_param_name_map = {}
-        self.optional = False
+        self.display_name = display_name
 
-        self.grouped_widgets = False  # if put all widgets in one GroupedWidgets widget.
+        self._widgets: dict[str: Widget] = {}
+        """ Notice: the key of _widgets is for inner use only, use param_name in widget to make sure high level uniqueness. """
 
-    def set_optional(self, optional):
-        self.optional = optional
-        for widget in self._widgets.values():
-            widget.set_optional(optional)
-
-    def set_group_widgets(self, grouped_widgets):
-        self.grouped_widgets = grouped_widgets
-
-    @abstractmethod
-    def run(self, **kwargs):
-        """ Notice: We *force* parameters to keyword args for easier use.
+        self.func_list: list[Func] = []
+        """ A Comp can hold multiple Funcs, if you do that, remember to map Inputs and Outputs of Funcs and Comp,
+            and connect the inner Inputs and Outputs manually, turn register_func's share_io off.
         """
-        pass
 
-    def __call__(self, **kwargs):
-        origin_kwargs = self.restore_origin_param_name(**kwargs)
-        # self.make_widget_inputs_type_right(**origin_kwargs)
-        return self.run(**origin_kwargs)
+        self.optional = optional
+        """ The value will influence frontend, e.g. decide a model can be set to null,
+            and the value validation.
+        """
+
+        self.grouped_widgets = grouped_widgets
+        """ Put all widgets in one GroupedWidgets widget or not, used for frontend to collapse a comp has 
+            a lots of widgets, a brain friendly thing.
+        """
+
+        self._links: list[Link] = []
+        """ Inner links of comp, happened before registered to a card, 
+        copy them to Card when registered. 
+        """
+
+        self.cached_outputs = OutputsCache()
 
     @property
-    def name(self):
-        return self._name if self._name else self.__class__.__name__
-
-    @property
-    def display_name(self):
-        return self._display_name if self._display_name else self.name
+    def func_inputs(self):
+        return {name: _input for name, _input in self._inputs.items() if _input.is_from_func}
 
     @property
     def widgets(self):
-        _widgets = {}
-        for param_name, widget in self._widgets.items():
-            mapped_param_name = self._origin_to_new_param_name_map.get(param_name)
-            if mapped_param_name:
-                _widgets[mapped_param_name] = widget
-            else:
-                _widgets[param_name] = widget
-        return _widgets
+        """ Widgets of the comp, grouped_widgets is not considered here, use widgets_info instead. """
+        return {widget.param_name: widget for widget in self._widgets.values()}
 
     @property
-    def widgets_dict(self):
-        """ Used to tell frontend how to render UI by backend. """
-        result = {}
-        for param_name, widget in self.widgets.items():
-            mapped_param_name = self._origin_to_new_param_name_map.get(param_name)
-            if mapped_param_name:
-                result[mapped_param_name] = widget.dict
-            else:
-                result[param_name] = widget.dict
-        return result
+    def links(self):
+        return self._links
 
     @property
-    def widgets_dict_grouped_widgets_considered(self):
-        """ Grouped Widgets is added here.
-         When a comp's grouped_widgets is set True, the _widgets is as same as before,
-         but call this method will make all it's _widgets in a grouped widget, so frontend get the grouped widgets
-         and render.
-         When frontend submits inputs to validate and generate, server.router.card_info_to_prompt
-         do the unpack work, then following processing can work without knowing the grouped widgets,
-         so it's transparent to them.
-         issue: not sure if it's appropriate to put it here in abstract layer.
-        """
+    def widgets_info(self):
+        """ Used to tell frontend how to render UI by backend. Dealing with grouped_widgets logic here. """
+
         result = {}
-        for param_name, widget in self.widgets.items():
-            mapped_param_name = self._origin_to_new_param_name_map.get(param_name)
-            if mapped_param_name:
-                result[mapped_param_name] = widget.dict
-            else:
-                result[param_name] = widget.dict
+        for widget in self._widgets.values():
+            result[widget.param_name] = widget.info
+
         if self.grouped_widgets:
             return {
                 self.display_name: {
@@ -104,84 +74,196 @@ class Comp(Func):
                     'value': list(result.values())
                 }
             }
-        else:
-            return result
-
-    @property
-    def widgets_value_info(self):
-        """ Used to tell the values of widgets. """
-        result = {}
-        for param_name, widget in self.widgets.items():
-            if widget.default_value_info:
-                result = {
-                    **result,
-                    **widget.default_value_info
-                }
-            else:
-                result[param_name] = widget.value
         return result
 
-    def register_widget(self, widget: Widget):
+    def set_prompt(self, prompt):
+        self.prompt = prompt
+        for func in self.func_list:
+            func.set_prompt(prompt)
+
+    def set_position_in_card(self, position):
+        """ A comp can hold funcs, which Func do not, so do it after it's origin manner. """
+        super().set_position_in_card(position)
+        for func in self.func_list:
+            func.set_position_in_card(position)
+
+    def set_optional(self, optional):
+        """ It will affect the interaction behavior on the frontend and value validation,
+            sync it with widgets, who do the validation work.
+         """
+        self.optional = optional
+        for widget in self._widgets.values():
+            widget.set_optional(optional)
+
+    def set_group_widgets(self, grouped_widgets):
+        """ Set the widgets of comp grouped, frontend will pack it. """
+        self.grouped_widgets = grouped_widgets
+
+    def change_param_name_and_display_name(self, origin_param, param_name, display_name=None):
+        """ Sometimes you need to change the param_name, display_name of widgets of comp, use this.
+            origin_param is unchanged since the comp created, so use it as an index, comp's widgets_info
+            will use widgets' param_name instead of origin_param.
+        """
+        widget = self._widgets[origin_param]
+        if widget:
+            widget.param_name = param_name
+            if display_name:
+                widget.display_name = display_name
+            self._widgets[origin_param] = widget
+
+        input_ = self._inputs[origin_param]
+        if input_:
+            input_.mapped_name = param_name
+
+    def set_widget_param_names_prefix(self, prefix):
+        """ Set all param_name of widgets with a common prefix """
+        for widget in self._widgets.values():
+            widget.param_name = str(prefix) + widget.param_name
+
+        for input_ in self._inputs.values():
+            input_.mapped_name = str(prefix) + input_.name
+
+    def set_widget_param_names_suffix(self, suffix):
+        """ Set all param_name of widgets with a common suffix """
+        for widget in self._widgets.values():
+            widget.param_name = widget.param_name + str(suffix)
+
+        for input_ in self._inputs.values():
+            input_.mapped_name = input_.name + str(suffix)
+
+    def restore_all_param_names(self):
+        """ clear all param_name set thing. """
+        for name, widget in self._widgets.items():
+            widget.param_name = name
+
+    def register_widget(self, widget):
+        """ Add a widget to comp, do when comp init, make sure it's after the Func which the widget's param belongs. """
+
+        assert widget.param_name in self._inputs.keys(), f"Widget's param_name: {widget.param_name} not found in inputs, register func first, or make sure widget's param_name is exactly same as param of the Func."
+
         self._widgets[widget.param_name] = widget
+        self._inputs[widget.param_name].source = 'widget'
 
-    def register_func(self, func: Func):
-        self.funcs[func.name] = func
+    def register_func(self, func: Func, share_io=True):
+        """ Register a func in comp, share_io means the comp share inputs and outputs with the func,
+            it is most situation when comp has only one func, you should set it False when comp has
+            multiple Funcs.
 
-    def make_widget_inputs_type_right(self, kwargs):
-        for param_name, param_value in kwargs.items():
-            widget = self.widgets.get(param_name)
-            if widget:
-                kwargs[param_name] = widget.make_type_right(param_value)
-        return kwargs
+            Warning: if you have multiple funcs, the inner func should not touch other inputs from outside,
+            it's a very basic rule whatsAI rely on, otherwise the system will crash.
+        """
 
-    def valid_widget_inputs(self, **kwargs) -> list[str]:
+        if share_io:
+            self.share_io(func)
+
+        """ Func_index default to 0, got actual value when registered to a Comp. """
+        func_index = len(self.func_list)
+        func.set_index_in_comp(func_index)
+
+        for output in func.outputs.values():
+            output.set_func_index(func_index)
+
+        for input_ in func.inputs.values():
+            input_.set_func_index(func_index)
+
+        self.func_list.append(func)
+
+    def link(self, output: FuncOutput, input_: FuncInput):
+        """ Remember a link between one output and input. """
+
+        assert isinstance(output, FuncOutput), f"output type: {type(output)} error."
+        assert isinstance(input_, FuncInput), f"input_ type: {type(input_)} error "
+        assert output.data_type == input_.data_type, \
+            f"Link between output {output.data_type} put and input {input_.data_type} have different data type."
+
+        link_ = Link.link(frm=output, to=input_)
+        if link_ not in self._links:
+            self._links.append(link_)
+
+    def can_link_to_self(self, strict=True):
+        """ If a comp can link to self or siblings, it must have same func inputs with outputs.
+        e.g. a lora/controlnet follow this rule, not sure if every a comp like them have this feature,
+        let's find out.
+        """
+
+        func_inputs = self.func_inputs.values()
+        outputs = self.outputs.values()
+
+        if len(func_inputs) != len(outputs):
+            return False
+
+        for _input, output in zip(func_inputs, outputs):
+            if strict:
+                is_same = (_input.data_type == output.data_type and _input.name == output.name)
+            else:
+                is_same = _input.data_type == output.data_type
+            if not is_same:
+                return False
+
+        return True
+
+    def link_to_sibling(self, pre_sibling: Func):
+        """ Useful when created Addon dynamically,  some addon are created base on user inputs,
+            You don't know how many comp the Addon will have until got user's addon_inputs,
+            take LoRA as an example.
+            Create inner links of the Comp/Addon, return the links.
+        """
+        assert self.can_link_to_self()
+
+        links = []
+        for index, (input_, output) in enumerate(zip(self.func_inputs.values(), pre_sibling.outputs.values())):
+            link = Link.link(frm=output, to=input_)
+            links.append(link)
+
+        return links
+
+    def add_links(self, links: list[Link]):
+        for link in links:
+            if link not in self._links:
+                self._links.append(link)
+
+    def make_type_right_and_valid_inputs(self, inputs: dict) -> (dict, list[str]):
         """ Used to valid input values from frontend by calling the widget's valid_input function.
-            Notice: Call it after param map if needed.
             :return: errors list, return empty list if success.
         """
         errors = []
+
         widget_param_names = list(self.widgets.keys())
-        for param_name, param_value in kwargs.items():
+        for param_name, param_value in inputs.items():
             widget = self.widgets.get(param_name)
             if not widget:
                 continue
+
+            inputs[param_name] = widget.make_type_right(param_value)
             error = widget.valid_input(param_value)
             if error:
                 errors.append(error)
             widget_param_names.remove(param_name)
 
         if widget_param_names:
-            errors.append("Params from widget: {} did not get value.".format(widget_param_names))
+            errors.append(f"Params from {str(self)}: {widget_param_names} did not get value")
 
-        return errors
+        # Is it necessary to return the inputs?
+        return inputs, errors
 
-    def map_param_name(self, origin_param_name, new_param_name):
-        """ We need this when the upstream(Card/Addon) want a different param name, especially they have
-            multiple comps in one type to distinguish parameters.
-        """
-        assert origin_param_name in self.widgets.keys(), (
-            'Param name: {} not in widget param names. '.format(origin_param_name))
-        self._origin_to_new_param_name_map[origin_param_name] = new_param_name
-        self._current_to_origin_param_name_map[new_param_name] = origin_param_name
-        for widget in self._widgets.values():
-            if widget.param_name == origin_param_name:
-                widget.map_param_name(origin_param_name, new_param_name)
-                break
+    def execute(self, inputs: dict, cached_outputs: OutputsCache, card, func_name):
+        for index, func in enumerate(self.func_list):
+            is_first = index == 0
+            is_last = index == len(self.func_list) - 1
 
-    def map_all_param_names_with_prefix(self, prefix):
-        for widget in self._widgets.values():
-            origin_param_name = widget.param_name
-            mapped_param_name = prefix + origin_param_name
+            if is_first:
+                func_outputs = func.execute(inputs, cached_outputs, card, func_name)
+                self.cached_outputs.sync_cache(cached_outputs)
+            else:
+                func_outputs = func.execute(inputs, self.cached_outputs, card, func_name)
 
-            widget.map_param_name(origin_param_name, mapped_param_name)
-            self._origin_to_new_param_name_map[origin_param_name] = mapped_param_name
-            self._current_to_origin_param_name_map[mapped_param_name] = origin_param_name
+            self.cached_outputs.cache_func_outputs(func_name, index, func_outputs)
 
-    def restore_origin_param_name(self, **kwargs):
-        for current_param_name, param_value in kwargs.items():
-            if current_param_name in self._current_to_origin_param_name_map:
-                origin_param_name = self._current_to_origin_param_name_map[current_param_name]
-                kwargs[origin_param_name] = param_value
-                kwargs.pop(current_param_name)
-        return kwargs
+            if is_last:
+                self.cached_outputs.clear_all()
+                cached_outputs.cache_func_outputs(func_name, index, func_outputs)
+                return func_outputs
 
+    @classmethod
+    def widgets_info_of_comps(cls, comps):
+        return {**{key: value for comp in comps for key, value in comp.widgets_info.items()}}
