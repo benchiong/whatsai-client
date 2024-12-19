@@ -39,6 +39,8 @@ import { showNormalNotification } from "../utils/notifications";
 import { atom, useRecoilState } from "recoil";
 import { useClientIdContext } from "../providers/ClientIdProvider";
 import { useTasksContext } from "../providers/TasksProvider";
+import { backendManager } from "../../main/ipc-constants";
+import { eventBackendManagerUrl } from "../../main/ipc-constants";
 
 export default function HomePage() {
   const theme = useMantineTheme();
@@ -51,6 +53,10 @@ export default function HomePage() {
     default: 14,
   });
   const [fontSize, setFontSize] = useRecoilState(fontSizeState);
+
+  window.ipc.on(backendManager, (managerUrl) => {
+    console.log("managerUrl:", managerUrl);
+  });
 
   return (
     <>
@@ -76,9 +82,9 @@ export default function HomePage() {
           </Button>
           <Button
             onClick={() => {
-              const res = getCardInfo("SD-Text-to-Image").then((r) =>
-                console.log(r),
-              );
+              const res = getCardInfo(
+                "TEST-Stable-Diffusion-Text-to-Image",
+              ).then((r) => console.log(r));
             }}
           >
             test card info
@@ -167,26 +173,6 @@ export default function HomePage() {
           </Button>
           <Button
             onClick={() => {
-              updateCardCache("SD-Text-to-Image", { b: 1 })
-                .then((success) => console.log(success))
-                .catch((e) => {
-                  console.log(e);
-                });
-            }}
-          >
-            CardInfo Cache Test
-          </Button>
-          <Button
-            onClick={() => {
-              getTasks().then((r) => {
-                console.log(r);
-              });
-            }}
-          >
-            getTasks
-          </Button>
-          <Button
-            onClick={() => {
               removeTask(26).then((r) => {
                 console.log(r);
               });
@@ -262,6 +248,14 @@ export default function HomePage() {
             }}
           >
             getArtwork
+          </Button>
+
+          <Button
+            onClick={() => {
+              window.ipc.send(backendManager, eventBackendManagerUrl);
+            }}
+          >
+            IPC Test
           </Button>
         </Stack>
       </Container>

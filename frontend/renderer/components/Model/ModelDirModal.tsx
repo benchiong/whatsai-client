@@ -19,7 +19,11 @@ import {
   removeModelDir,
   setDefaultModelDir,
 } from "../../lib/api";
-import { ModelDirType } from "../../data-type/model";
+import {
+  FrontModelDirType,
+  mapModelDirSchema2FrontModelDirSchema,
+  ModelDirType,
+} from "../../data-type/model";
 import { IconCircleMinus } from "@tabler/icons-react";
 import { showErrorNotification } from "../../utils/notifications";
 
@@ -37,7 +41,9 @@ export function ModelDirModal({
   const [path, setPath] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorInfo, setErrorInfo] = useState("");
-  const [modelDirInfo, setModelDirInfo] = useState<ModelDirType | null>(null);
+  const [modelDirInfo, setModelDirInfo] = useState<FrontModelDirType | null>(
+    null,
+  );
   const [dirToRemove, setDirToRemove] = useState("");
 
   const getModelDirInfo = useCallback(() => {
@@ -66,7 +72,10 @@ export function ModelDirModal({
                 e.stopPropagation();
                 setDefaultModelDir(modelType, dirInfo.dir).then((resp) => {
                   if (resp?.record) {
-                    setModelDirInfo(resp.record);
+                    const frontRecord = mapModelDirSchema2FrontModelDirSchema(
+                      resp.record,
+                    );
+                    setModelDirInfo(frontRecord);
                   } else {
                     showErrorNotification({
                       error: Error("Set default dir failed"),
@@ -188,7 +197,11 @@ export function ModelDirModal({
                       addModelDir(modelType, trimmedPath, false).then(
                         (resp) => {
                           if (resp && resp.record) {
-                            setModelDirInfo(resp.record);
+                            const frontRecord =
+                              mapModelDirSchema2FrontModelDirSchema(
+                                resp.record,
+                              );
+                            setModelDirInfo(frontRecord);
                           } else {
                             showErrorNotification({
                               error: Error("Add dir failed"),
@@ -225,7 +238,11 @@ export function ModelDirModal({
                     removeModelDir(modelType, dirToRemove).then(
                       (modelDirInfoResp) => {
                         if (modelDirInfoResp?.record) {
-                          setModelDirInfo(modelDirInfoResp.record);
+                          const frontRecord =
+                            mapModelDirSchema2FrontModelDirSchema(
+                              modelDirInfoResp.record,
+                            );
+                          setModelDirInfo(frontRecord);
                           setDirToRemove("");
                         }
                       },

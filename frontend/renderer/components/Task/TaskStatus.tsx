@@ -11,12 +11,12 @@ import { TaskType } from "../../data-type/task";
 export function TaskStatus({ task }: { task: TaskType }) {
   const theme = useMantineTheme();
 
-  const isQueued = task.status === 1;
-  const isProcessing = task.status === 2;
+  const isQueued = task.status === "queued";
+  const isProcessing = task.status === "processing";
   const isModelLoading = isProcessing && !task.preview_info;
-  const isCanceled = task.status === 3;
-  const isFailed = task.status === 4;
-  const isFinished = task.status === 5;
+  const isCanceled = task.status === "canceled";
+  const isFailed = task.status === "failed";
+  const isFinished = task.status === "done";
 
   let bgColor = theme.colors.waLight[3];
   let text;

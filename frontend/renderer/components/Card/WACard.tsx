@@ -138,7 +138,7 @@ export function WACard({
         />
       </ScrollArea>
 
-      <AddonList cardInfo={cardInfo} />
+      <AddonList cardInfo={cardInfo} onCardInfoChanged={onCardInfoChanged} />
       <Center
         bg={theme.colors.waLight[3]}
         w={"100%"}
@@ -152,11 +152,12 @@ export function WACard({
         <Button
           h={32}
           w={160}
+          loading={loading}
           onClick={() => {
             setLoading(true);
             generate(cardInfo.card_name, clientIdContext.clientId)
               .then((r) => {
-                setLoading(true);
+                setLoading(false);
                 if (r) {
                   taskContext.startLoop();
                 } else {
@@ -167,7 +168,7 @@ export function WACard({
                 }
               })
               .catch((e) => {
-                setLoading(true);
+                setLoading(false);
 
                 showErrorNotification({
                   error: Error(e),

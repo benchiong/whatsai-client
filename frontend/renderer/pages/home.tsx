@@ -4,12 +4,14 @@ import { Container, Group } from "@mantine/core";
 import { SimpleCardInfoType } from "../data-type/card";
 import { getAllCards } from "../lib/api";
 import { CardDigest } from "../components/Card/CardDigest";
+import { useBackendManagerContext } from "../providers/BackendManagerProvider";
 
 export default function HomePage() {
   const [cards, setCards] = useState<SimpleCardInfoType[]>([]);
+  const backendManagerContext = useBackendManagerContext();
   useEffect(() => {
     getAllCards().then((cards) => setCards(cards));
-  }, []);
+  }, [backendManagerContext.isBackendReady]);
 
   return (
     <>

@@ -31,9 +31,16 @@ export default function CardDetail() {
   const onCardInfoChanged = useCallback(
     (changedInfo: CardInfoType) => {
       if (!cardInfo) {
+        router.back();
         return;
       }
-      updateCardCache(cardInfo.card_name, changedInfo).then((r) => {});
+      updateCardCache(cardInfo.card_name, changedInfo).then((resp) => {
+        if (resp?.cardInfo) {
+          setCardInfo(resp.cardInfo);
+        } else {
+          console.log(resp.errorMessage);
+        }
+      });
     },
     [cardInfo],
   );
@@ -43,12 +50,9 @@ export default function CardDetail() {
       return;
     }
     const cardName = cardInfo.card_name;
-    updateCardCache(cardName, {}).then((success) => {
-      if (success) {
-        getCardInfo(cardName).then((resp) => {
-          setCardInfo(resp.cardInfo);
-          router.back();
-        });
+    updateCardCache(cardName, null).then((resp) => {
+      if (resp?.cardInfo) {
+        setCardInfo(resp.cardInfo);
       }
     });
   }, [cardInfo]);

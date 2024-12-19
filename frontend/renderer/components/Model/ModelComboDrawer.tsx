@@ -91,7 +91,7 @@ export function ModelComboDrawer({
             >
               {`Select ${modelType}`}
             </Text>
-            <Refresh onClick={refreshModels} />
+            <Refresh asyncOperation={refreshModels} />
           </Group>
 
           <Close onClick={() => closeDrawer()} />

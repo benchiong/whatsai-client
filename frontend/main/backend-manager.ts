@@ -2,6 +2,8 @@ import { spawn, ChildProcess } from "child_process";
 import * as net from "net";
 import fs from "fs";
 import { ipcMain } from "electron";
+import { backendManager } from "./ipc-constants";
+import { eventBackendManagerUrl } from "./ipc-constants";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -140,6 +142,8 @@ export class BackendManager {
   }
 }
 
-ipcMain.on("backend-manager", async (event) => {
-  event.reply("managerUrl", managerUrl);
+ipcMain.on(backendManager, async (event, event_type: string) => {
+  if (event_type == eventBackendManagerUrl) {
+    event.reply(backendManager, managerUrl);
+  }
 });

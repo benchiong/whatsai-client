@@ -113,6 +113,7 @@ function ModelDownloadingItem({ info }: { info: ModelDownloadingInfoType }) {
             color={theme.colors.waLight[2]}
             backgroundOpacity={0.7}
             fixed={false}
+            // zIndex={110}
           >
             <Stack w={140} h={210} align={"center"} justify={"center"}>
               {info.eta && (

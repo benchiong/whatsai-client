@@ -10,7 +10,7 @@ node_modules
 .node_modules/
 built/*
 
-**/main.exe
+**/backend-manager
 
 **/.DS_Store
 yarn.lock

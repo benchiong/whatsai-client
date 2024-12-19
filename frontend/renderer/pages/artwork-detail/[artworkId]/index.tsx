@@ -13,6 +13,7 @@ import Head from "next/head";
 import { IconX } from "@tabler/icons-react";
 import { ImageLocal } from "../../../components/Image/ImageLocal";
 import { Prompt } from "../../../components/Art/Prompt";
+import { ArtworkInfo } from "../../../components/Art/Info";
 
 export default function ArtworkDetail() {
   const router = useRouter();
@@ -46,14 +47,17 @@ export default function ArtworkDetail() {
         }}
         align={"start"}
       >
-        <Center m={40} bg={theme.colors.waLight[1]}>
-          <ImageLocal
-            localPath={artwork.path}
-            width={450}
-            height={600}
-            objectFit={"contain"}
-          />
-        </Center>
+        <Stack>
+          <Center m={40} bg={theme.colors.waLight[1]}>
+            <ImageLocal
+              localPath={artwork.file_path}
+              width={450}
+              height={600}
+              objectFit={"contain"}
+            />
+          </Center>
+          <ArtworkInfo artwork={artwork} />
+        </Stack>
 
         <Stack style={{ position: "relative" }}>
           <ScrollArea
@@ -61,34 +65,34 @@ export default function ArtworkDetail() {
             scrollbarSize={2}
             bg={theme.colors.waLight[2]}
             h={`calc(100vh)`}
-            w={600}
+            w={500}
           >
             <Prompt
               cardName={artwork.card_name}
-              inputsInfo={artwork.inputs_info}
-              addonInputsInfo={artwork.addon_inputs_info}
+              inputsInfo={artwork.prompt.base_inputs}
+              addonInputsInfo={artwork.prompt.addon_inputs}
             />
           </ScrollArea>
-
-          <Center
-            bg={theme.colors.waLight[4]}
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "25px",
-              cursor: "pointer",
-              position: "absolute",
-              right: "-100px",
-              top: "10px",
-              zIndex: 400,
-            }}
-            onClick={() => {
-              router.back();
-            }}
-          >
-            <IconX />
-          </Center>
         </Stack>
+
+        <Center
+          bg={theme.colors.waLight[4]}
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "25px",
+            cursor: "pointer",
+            position: "absolute",
+            right: "150px",
+            top: "10px",
+            zIndex: 400,
+          }}
+          onClick={() => {
+            router.back();
+          }}
+        >
+          <IconX />
+        </Center>
       </Group>
     </>
   );

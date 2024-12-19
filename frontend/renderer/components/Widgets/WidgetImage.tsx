@@ -33,16 +33,14 @@ export function WidgetImage({
   const theme = useMantineTheme();
   const imageWidth = 150;
   const imageHeight = 210;
-  const ref = useRef<HTMLButtonElement | null>(null);
+  const ref = useRef<HTMLInputElement | null>(null);
 
   const [image, setImage] = useState<string | null>(defaultImage);
   const [recentlyUsedOpened, setRecentlyUsedOpened] = useState(false);
 
   const AddToRecent = (image_path: string) => {
     addRecentlyUsed("image", ruSubKey, image_path)
-      .then((r) => {
-        // console.log("add to ru:", r);
-      })
+      .then((r) => {})
       .catch((e) => {
         console.log(e);
       });
@@ -120,6 +118,9 @@ export function WidgetImage({
                   onClick={() => {
                     setImage(null);
                     onChange(null);
+                    if (ref.current?.value) {
+                      ref.current!.value = "";
+                    }
                   }}
                 />
               </Center>
@@ -160,10 +161,11 @@ export function WidgetImage({
             overflow: "hidden",
           }}
         >
-          <FileInput
+          <input
+            type={"file"}
             ref={ref}
-            accept={"image/*"}
-            onChange={(file) => {
+            onChange={(event) => {
+              const file = event.target.files?.[0];
               setImage(file?.path ?? null);
               onChange(file?.path ?? null);
               if (file?.path) {

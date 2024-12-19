@@ -35,13 +35,45 @@ export const DirInfoSchema = z.object({
 });
 
 export type DirInfoType = z.infer<typeof DirInfoSchema>;
+
+// data type return by server
 export const ModelDirSchema = z.object({
+  model_type: z.string(),
+  dirs: z.array(z.string()),
+  default_dir: z.string(),
+  counts: z.array(z.number()),
+});
+
+export type ModelDirType = z.infer<typeof ModelDirSchema>;
+
+// data type frontend used
+export const FrontModelDirSchema = z.object({
   model_type: z.string(),
   dirs: z.array(DirInfoSchema),
   default_dir: z.string(),
 });
 
-export type ModelDirType = z.infer<typeof ModelDirSchema>;
+export type FrontModelDirType = z.infer<typeof FrontModelDirSchema>;
+
+export function mapModelDirSchema2FrontModelDirSchema(modelDir: ModelDirType) {
+  const { dirs, counts, default_dir } = modelDir;
+  let front_dirs = [];
+  for (let i = 0; i < dirs.length; i++) {
+    const is_default = dirs[i] == default_dir;
+    const frontDir = {
+      dir: dirs[i],
+      model_count: counts[i],
+      is_default: is_default,
+    };
+    front_dirs.push(frontDir);
+  }
+
+  return FrontModelDirSchema.parse({
+    model_type: modelDir.model_type,
+    default_dir: modelDir.default_dir,
+    dirs: front_dirs,
+  });
+}
 
 export const ModelDownloadingInfoSchema = z.object({
   url: z.string(),

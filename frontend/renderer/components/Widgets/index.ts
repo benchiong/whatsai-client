@@ -52,7 +52,7 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
     case WidgetInt:
       params = {
         text: widgetInfo["display_name"],
-        defaultValue: widgetInfo["value"],
+        value: widgetInfo["value"],
         step: widgetInfo["step"],
         max: widgetInfo["max"],
         min: widgetInfo["min"],
@@ -61,7 +61,7 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
     case WidgetFloat:
       params = {
         text: widgetInfo["display_name"],
-        defaultValue: widgetInfo["value"],
+        value: widgetInfo["value"],
         step: widgetInfo["step"],
         max: widgetInfo["max"],
         min: widgetInfo["min"],
@@ -71,7 +71,7 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
     case WidgetCombo:
       params = {
         text: widgetInfo["display_name"],
-        defaultValue: widgetInfo["value"],
+        value: widgetInfo["value"],
         values: widgetInfo["values"],
       };
       break;
@@ -87,13 +87,13 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
     case WidgetText:
       params = {
         text: widgetInfo["display_name"],
-        defaultValue: widgetInfo["value"],
+        value: widgetInfo["value"],
       };
       break;
     case WidgetModelCombo:
       params = {
         text: widgetInfo["display_name"],
-        defaultModel: widgetInfo["value"],
+        defaultModelId: widgetInfo["value"],
         funcName: widgetInfo["values_function_name"],
         paramName: widgetInfo["param_name"],
         optional: widgetInfo["optional"],

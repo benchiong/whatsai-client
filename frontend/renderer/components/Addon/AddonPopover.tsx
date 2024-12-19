@@ -34,7 +34,7 @@ export function AddonPopover({
           position: "absolute",
           top: "3px",
           right: "3px",
-          zIndex: 450,
+          zIndex: 500,
         }}
       >
         <Close onClick={closeAddon} width={20} />

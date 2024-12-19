@@ -16,8 +16,6 @@ export function WidgetsRender({
   height?: number;
   positionIndex?: number | null;
 }) {
-  const [innerWidgets, setInnerWidgets] = useState<WidgetsType>(widgets);
-
   return (
     <Stack align="center" justify="space-between" gap="md" w={width}>
       {widgets.map((w, index) => {
@@ -31,13 +29,12 @@ export function WidgetsRender({
             {...params}
             key={key}
             onChange={(value) => {
-              let widgets: WidgetsType = [...innerWidgets];
-              widgets[index] = {
-                ...innerWidgets[index],
+              let newWidgets: WidgetsType = [...widgets];
+              newWidgets[index] = {
+                ...widgets[index],
                 value: value,
               } as WidgetUnionsType;
-              setInnerWidgets(widgets);
-              onChange(widgets);
+              onChange(newWidgets);
             }}
             height={height}
             positionIndex={positionIndex}

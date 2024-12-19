@@ -1,27 +1,21 @@
 import { Group, Select } from "@mantine/core";
-import { useEffect, useState } from "react";
 import { LabelName } from "./LabelName";
 
 export function WidgetCombo({
   text,
   values,
   onChange,
-  defaultValue = "euler",
+  value = "euler",
   width = "100%",
   height = 36,
 }: {
   text: string;
   values: string[];
-  defaultValue: string;
+  value: string;
   onChange?: (value: string) => void;
   width?: number | string;
   height?: number;
 }) {
-  const [value, setValue] = useState<string>(defaultValue);
-  useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
-
   return (
     <Group
       justify={"center"}
@@ -54,10 +48,9 @@ export function WidgetCombo({
         rightSectionProps={{
           color: "var(--mantine-color-primary-9)",
         }}
-        defaultValue={defaultValue}
+        defaultValue={value}
         onChange={(_value, _) => {
           onChange && onChange(_value ?? "");
-          setValue(_value ?? "");
         }}
       />
     </Group>

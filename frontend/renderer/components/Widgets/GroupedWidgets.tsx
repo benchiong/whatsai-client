@@ -1,6 +1,6 @@
 import { WidgetsType } from "../../data-type/widget";
 import { WidgetsRender } from "./WidgetsRender";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Collapse, Stack, Group, useMantineTheme, Title } from "@mantine/core";
 import {
   IconLayoutNavbarCollapse,
@@ -14,13 +14,19 @@ export function GroupedWidgets({
   width = "100%",
 }: {
   text: string;
-  value: WidgetsType;
+  widgets: WidgetsType;
   onChange: (value: WidgetsType) => void;
   width: number | string;
 }) {
   const theme = useMantineTheme();
 
   const [opened, setOpened] = useState(true);
+
+  // useEffect(() => {
+  //   if (widgets.length > 2) {
+  //     setOpened(false);
+  //   }
+  // }, [widgets]);
 
   return (
     <Stack

@@ -60,7 +60,7 @@ export function ModelsRecord({
           >{`${models?.length ?? 0}`}</Text>
 
           <Refresh
-            onClick={async () => {
+            asyncOperation={async () => {
               const models = await syncModelInfos(typeName);
               if (models.length > 0) {
                 setModels(models);

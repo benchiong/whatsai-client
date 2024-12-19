@@ -69,7 +69,7 @@ export default function ModelPage() {
             borderRadius: "5px",
             position: "sticky",
             top: "0px",
-            zIndex: 200,
+            zIndex: 210,
           }}
         >
           <Tooltip

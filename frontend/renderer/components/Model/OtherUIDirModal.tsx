@@ -11,10 +11,19 @@ import {
   Combobox,
   useCombobox,
   useMantineTheme,
+  Radio,
+  Center,
+  Tooltip,
 } from "@mantine/core";
 import React, { useCallback, useEffect, useState } from "react";
-import { addOtherUIDirs, getOtherUIPathMap } from "../../lib/api";
+import {
+  addOtherUIDirs,
+  getOtherUIPathMap,
+  setDefaultModelDir,
+} from "../../lib/api";
 import { UIMapType } from "../helpers";
+import { mapModelDirSchema2FrontModelDirSchema } from "../../data-type/model";
+import { showErrorNotification } from "../../utils/notifications";
 
 export function OtherUIDirModal({
   opened,
@@ -26,6 +35,7 @@ export function OtherUIDirModal({
   const theme = useMantineTheme();
   const [UIName, setUIName] = useState("WebUI");
   const [dir, setDir] = useState("");
+  const [asDefault, setAsDefault] = useState(false);
   const [UIMap, setUIMap] = useState<UIMapType>({});
   const [addedDirs, setAddedDirs] = useState<string[][]>([]);
 
@@ -88,7 +98,7 @@ export function OtherUIDirModal({
       }}
       radius={10}
       transitionProps={{ duration: 100 }}
-      size={"lg"}
+      size={"xl"}
       zIndex={500}
     >
       <Stack align={"center"}>
@@ -144,6 +154,31 @@ export function OtherUIDirModal({
             radius={"sm"}
             onChange={(e) => setDir(e.target.value)}
           />
+
+          <Tooltip
+            label={"As default. (where models will be put)"}
+            zIndex={500}
+            radius={5}
+            bg={theme.colors.waLight[6]}
+            color={theme.colors.waLight[9]}
+            style={{
+              fontSize: "12px",
+            }}
+          >
+            <Center>
+              <Radio
+                checked={asDefault}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAsDefault(!asDefault);
+                }}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setAsDefault(e.target.checked);
+                }}
+              />
+            </Center>
+          </Tooltip>
         </Group>
         {addedDirs.length > 0 && <Text>Added Dirs</Text>}
 
@@ -188,7 +223,7 @@ export function OtherUIDirModal({
           my={10}
           disabled={!dir || addedDirs.length > 0}
           onClick={() => {
-            addOtherUIDirs(UIName, dir).then((resp) => {
+            addOtherUIDirs(UIName, dir, asDefault).then((resp) => {
               const addedDirs = resp?.added_paths;
               if (addedDirs) {
                 setAddedDirs(addedDirs);

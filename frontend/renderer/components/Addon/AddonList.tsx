@@ -1,15 +1,26 @@
 import { Popover, Stack, useMantineTheme } from "@mantine/core";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useModelSelectionDrawerContext } from "../../providers/ModelSelectionDrawerProvider";
 import { AddonListType, CardInfoType } from "../../data-type/card";
 import { AddonPopover } from "./AddonPopover";
 import { AddonTabItem } from "./AddonTabItem";
 
-export function AddonList({ cardInfo }: { cardInfo: CardInfoType }) {
+export function AddonList({
+  cardInfo,
+  onCardInfoChanged,
+}: {
+  cardInfo: CardInfoType;
+  onCardInfoChanged: (cardInfo: CardInfoType) => void;
+}) {
   const theme = useMantineTheme();
   const modelDrawerContext = useModelSelectionDrawerContext();
 
   const [addons, setAddons] = useState<AddonListType>(cardInfo.addons);
+
+  useEffect(() => {
+    setAddons(cardInfo.addons);
+  }, [cardInfo]);
+
   const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const closeAddon = () => {
     setSelectedIndex(-1);
@@ -83,6 +94,9 @@ export function AddonList({ cardInfo }: { cardInfo: CardInfoType }) {
             const newAddons = [...addons];
             newAddons[selectedIndex] = changedAddon;
             setAddons(newAddons);
+            const newCardInfo = { ...cardInfo };
+            newCardInfo.addons = newAddons;
+            onCardInfoChanged(newCardInfo);
           }}
         />
       </Popover.Dropdown>

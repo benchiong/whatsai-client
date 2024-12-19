@@ -4,20 +4,16 @@ import { LabelSingleLine } from "./LabelSingleLine";
 
 export function WidgetText({
   text,
-  defaultValue,
+  value,
   onChange,
   width = "100%",
 }: {
   text: string;
-  defaultValue: string;
+  value: string;
   onChange?: (value: string) => void;
   width?: number | string;
 }) {
   const theme = useMantineTheme();
-  const [value, setValue] = useState(defaultValue);
-  useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
   return (
     <Stack
       justify={"start"}
@@ -41,7 +37,6 @@ export function WidgetText({
         mx={10}
         onChange={(e) => {
           const value = e.target.value;
-          setValue(value);
           onChange && onChange(value);
         }}
         placeholder={`Enter ${text.toLowerCase()} here.`}

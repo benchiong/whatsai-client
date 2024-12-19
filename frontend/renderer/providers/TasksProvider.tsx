@@ -41,7 +41,7 @@ export function TasksContextProvider({
   const calProcessingTaskCount = useCallback((tasks: TaskArrayType) => {
     let count = 0;
     for (const task of tasks) {
-      if (task.status == 2 || task.status == 1) {
+      if (task.status == "processing" || task.status == "queued") {
         count += 1;
       }
     }
@@ -72,9 +72,16 @@ export function TasksContextProvider({
   }, []);
 
   const interval = useInterval(() => getLatestTask(), 1000);
+
   useEffect(() => {
     getLatestTask();
   }, []);
+
+  useEffect(() => {
+    if (drawerOpened && !interval.active) {
+      interval.start();
+    }
+  }, [drawerOpened]);
 
   return (
     <TasksContext.Provider

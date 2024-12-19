@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useRef, useState } from "react";
 
 export type CardContextType = {
   cardName: string;
@@ -25,21 +25,20 @@ export function CardContextProvider({
 }: {
   children: React.ReactNode;
 }) {
-  let cbs: CallBackType = {};
+  const cbs = useRef<CallBackType>({});
   const [cardName, setCardName] = useState("");
-
   return (
     <CardContext.Provider
       value={{
         cardName,
         setCardName,
         onGenerate: () => {
-          for (const key in cbs) {
-            cbs[key]();
+          for (const key in cbs.current) {
+            cbs.current[key]();
           }
         },
         registerOnGenerateCallback: (cb, key) => {
-          cbs[key] = cb;
+          cbs.current[key] = cb;
         },
       }}
     >

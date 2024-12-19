@@ -14,18 +14,24 @@ export const CardInfoSchema = z.object({
 
 export type CardInfoType = z.infer<typeof CardInfoSchema>;
 
-export const WorkFlowSchema = z.array(CardInfoSchema);
-export type WorkFlowType = z.infer<typeof WorkFlowSchema>;
+export const PreModelSchema = z.object({
+  hash: z.string().optional().nullable(),
+  download_url: z.string().optional().nullable(),
+  file_name: z.string().optional().nullable(),
+});
+
+export type PreModelType = z.infer<typeof PreModelSchema>;
 
 export const SimpleCardInfoSchema = z.object({
+  id: z.number(),
   card_name: z.string(),
+  display_name: z.string().nullable(),
   describe: z.string().nullable(),
   card_type: z.string(),
   location: z.string().nullable(),
   remote_url: z.string().nullable(),
-  pre_models: z.array(z.string()),
+  pre_models: z.array(PreModelSchema),
   cover_image: z.string().nullable(),
-  is_ready: z.boolean(),
 });
 
 export type SimpleCardInfoType = z.infer<typeof SimpleCardInfoSchema>;

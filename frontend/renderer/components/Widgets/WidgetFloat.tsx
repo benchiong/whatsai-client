@@ -7,7 +7,7 @@ import {
   Popover,
   useMantineTheme,
 } from "@mantine/core";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getHotkeyHandler, useClickOutside } from "@mantine/hooks";
 import { ChevronRight } from "./ChevronRight";
 import { ChevronLeft } from "./ChevronLeft";
@@ -16,7 +16,7 @@ import { showNormalNotification } from "../../utils/notifications";
 
 export function WidgetFloat({
   text,
-  defaultValue,
+  value,
   onChange,
   step = 1.0,
   max = 100.0,
@@ -26,7 +26,7 @@ export function WidgetFloat({
   height = 38,
 }: {
   text: string;
-  defaultValue: number;
+  value: number;
   step?: number;
   max?: number;
   min?: number;
@@ -35,58 +35,51 @@ export function WidgetFloat({
   height?: number;
   onChange?: (value: number) => void;
 }) {
-  const innerOnChange = (value: string) => {
-    onChange && onChange(parseFloat(value));
+  const innerOnChange = (value: number) => {
+    onChange && onChange(roundToPrecision(value, round));
   };
   const theme = useMantineTheme();
 
-  const [value, setValue] = useState(defaultValue.toFixed(round));
+  const [inputValue, setInputValue] = useState(value.toFixed(round));
 
-  const [inputValue, setInputValue] = useState(value);
   const [opened, setOpened] = useState(false);
   const ref = useClickOutside(() => setOpened(false));
 
-  const increase = () => {
-    setValue((prevValue) => {
-      const newValue = parseFloat(prevValue) + step;
-      const value = Math.min(newValue, max).toFixed(round);
-      if (value == max.toFixed(round)) {
-        showNormalNotification({
-          title: "Reach the maximum value",
-          message: `Value of ${text}: ${value} has reached the maximum.`,
-        });
-      }
-      innerOnChange(value);
-      return value;
-    });
-  };
+  useEffect(() => {
+    setInputValue(value.toFixed(round));
+  }, [value]);
 
-  const decrease = () => {
-    setValue((prevValue) => {
-      const newValue = parseFloat(prevValue) - step;
-      const value = Math.max(newValue, min).toFixed(round);
-      if (value == min.toFixed(round)) {
-        showNormalNotification({
-          title: "Reach the minimum value",
-          message: `Value of ${text}: ${value} has reached the minimum.`,
-        });
-      }
-      innerOnChange(value);
-      return value;
-    });
-  };
+  const increase = useCallback(() => {
+    let newValue = value + step;
+    newValue = Math.min(newValue, max);
+    if (newValue >= max) {
+      showNormalNotification({
+        title: "Reach the maximum value",
+        message: `Value of ${text}: ${newValue} has reached the maximum.`,
+      });
+    }
+    innerOnChange(newValue);
+  }, [value]);
+
+  const decrease = useCallback(() => {
+    let newValue = value - step;
+    newValue = Math.max(newValue, min);
+    if (newValue <= min) {
+      showNormalNotification({
+        title: "Reach the minimum value",
+        message: `Value of ${text}: ${newValue} has reached the minimum.`,
+      });
+    }
+    innerOnChange(newValue);
+  }, [value]);
 
   const popoverOKButtonOnClick = () => {
     setOpened(false);
     const inputFloatValue = parseFloat(inputValue);
     if (isNaN(inputFloatValue)) {
-      setValue("" + defaultValue);
       innerOnChange(value);
     } else {
-      const value = Math.min(max, Math.max(min, inputFloatValue)).toFixed(
-        round,
-      );
-      setValue(value);
+      const value = Math.min(max, Math.max(min, inputFloatValue));
       innerOnChange(value);
     }
   };
@@ -126,10 +119,7 @@ export function WidgetFloat({
                 ml={10}
                 flex={1}
               >
-                <ChevronLeft
-                  onClick={decrease}
-                  disabled={parseFloat(value) <= min}
-                />
+                <ChevronLeft onClick={decrease} disabled={value <= min} />
 
                 <Text
                   style={{
@@ -140,13 +130,10 @@ export function WidgetFloat({
                     textAlign: "center",
                   }}
                 >
-                  {value}
+                  {value.toFixed(round)}
                 </Text>
 
-                <ChevronRight
-                  onClick={increase}
-                  disabled={parseFloat(value) >= max}
-                />
+                <ChevronRight onClick={increase} disabled={value >= max} />
               </Flex>
             </Flex>
           </Group>
@@ -175,4 +162,9 @@ export function WidgetFloat({
       </Popover>
     </Group>
   );
+}
+
+function roundToPrecision(value: number, round: number): number {
+  const factor = Math.pow(10, round);
+  return Math.round(value * factor) / factor;
 }

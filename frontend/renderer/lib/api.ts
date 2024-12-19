@@ -1,11 +1,14 @@
 import { WidgetImageSchema, WidgetType } from "../data-type/widget";
 import {
   CardInfoSchema,
+  CardInfoType,
   SimpleCardInfoArraySchema,
   SimpleCardInfoArrayType,
 } from "../data-type/card";
 import { z } from "zod";
 import {
+  FrontModelDirType,
+  mapModelDirSchema2FrontModelDirSchema,
   ModelDirSchema,
   ModelDirType,
   ModelDownloadingInfoArraySchema,
@@ -37,7 +40,12 @@ import {
   CivitaiModelVersionType,
 } from "../data-type/civitai-data-type";
 
-const serverUrl = "http://127.0.0.1:8172/";
+let serverUrl = "http://127.0.0.1:8172/";
+
+export function setServeUrl(url: string) {
+  serverUrl = url;
+  console.log(serverUrl);
+}
 
 export async function home(): Promise<any> {
   const res = await fetch(serverUrl, {
@@ -201,6 +209,40 @@ export async function addRecentlyUsed(
   }
 }
 
+export async function removeRecentlyUsed(
+  mediaType: string,
+  subKey: string,
+  localPath: string,
+): Promise<MediaArrayType | null> {
+  try {
+    const url = serverUrl + "remove_recently_used/";
+
+    const data = {
+      media_type: mediaType,
+      sub_key: subKey,
+      local_path: localPath,
+    };
+    const result = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    const res = await result.json();
+    const r = MediaArraySchema.safeParse(res);
+    if (r.success) {
+      return r.data;
+    } else {
+      console.log(r.error.issues);
+      return null;
+    }
+  } catch (e) {
+    console.log(e);
+    return null;
+  }
+}
+
 export async function execute(prompt: object) {
   try {
     const url = serverUrl + "execution?client_id=1bc";
@@ -288,8 +330,8 @@ export async function getCardInfo(
 
 export async function updateCardCache(
   cardName: string,
-  cardInfo: any = null,
-): Promise<Boolean> {
+  cardInfo: CardInfoType | null = null,
+): Promise<LocalCardInfoResponse | null> {
   try {
     const url = serverUrl + "card/cache_card_prompt/";
 
@@ -308,16 +350,16 @@ export async function updateCardCache(
       },
     });
     const res = await result.json();
-    const r = z.boolean().safeParse(res);
+    const r = LocalCardInfoResponseSchema.safeParse(res);
     if (r.success) {
       return r.data;
     } else {
       console.log(r.error.issues);
-      return false;
+      return null;
     }
   } catch (e) {
     console.log(e);
-    return false;
+    return null;
   }
 }
 
@@ -386,21 +428,34 @@ export async function removeTask(taskId: number): Promise<Boolean> {
   }
 }
 
-export async function getArtworks(): Promise<ArtworkArrayType> {
+const ArtworksResponseSchema = z.object({
+  artworks: ArtworkArraySchema,
+  page_num: z.number(),
+  has_next: z.boolean(),
+});
+
+type ArtworksResponseType = z.infer<typeof ArtworksResponseSchema>;
+
+export async function getArtworks(
+  pageNumber: number,
+): Promise<ArtworksResponseType | null> {
   try {
-    const resp = await fetch(serverUrl + "art/get_artworks", {
-      method: "GET",
-    });
+    const resp = await fetch(
+      serverUrl + `art/get_artworks?page_num=${pageNumber}`,
+      {
+        method: "GET",
+      },
+    );
     const res = await resp.json();
-    const r = ArtworkArraySchema.safeParse(res);
+    const r = ArtworksResponseSchema.safeParse(res);
     if (r.success) {
       return r.data;
     } else {
       console.log(r.error.issues);
-      return [];
+      return null;
     }
   } catch (e) {
-    return [];
+    return null;
   }
 }
 
@@ -460,7 +515,6 @@ export async function syncModelInfos(
 
     const data = {
       model_type: modelType,
-      force_renew: false,
     };
 
     const resp = await fetch(url, {
@@ -498,6 +552,33 @@ export async function getModels(): Promise<ModelInfoArrayType> {
     }
   } catch (e) {
     return [];
+  }
+}
+
+export async function getModelByModelId(
+  modelId: string,
+): Promise<ModelInfoType | null> {
+  try {
+    const resp = await fetch(
+      serverUrl + `model/get_model_by_model_id?model_id=${modelId}`,
+      {
+        method: "GET",
+      },
+    );
+    const res = await resp.json();
+    if (!res) {
+      return null;
+    }
+    const r = ModelInfoSchema.safeParse(res);
+    if (r.success) {
+      return r.data;
+    } else {
+      console.log(r.error.issues);
+      return null;
+    }
+  } catch (e) {
+    console.log(e);
+    return null;
   }
 }
 
@@ -558,7 +639,7 @@ export async function downloadCivitaiModel(
 
 export async function getModelDir(
   modelType: string,
-): Promise<ModelDirType | null> {
+): Promise<FrontModelDirType | null> {
   try {
     const resp = await fetch(serverUrl + `model/model_dir/${modelType}`, {
       method: "GET",
@@ -566,7 +647,8 @@ export async function getModelDir(
     const res = await resp.json();
     const r = ModelDirSchema.safeParse(res);
     if (r.success) {
-      return r.data;
+      const serverData = r.data;
+      return mapModelDirSchema2FrontModelDirSchema(serverData);
     } else {
       console.log(r.error.issues);
       return null;

@@ -17,7 +17,7 @@ export function TaskPanel({ height }: { height: string }) {
     >
       <Stack align={"center"} gap={20}>
         {tasks.map((task) => {
-          return <TaskItem task={task} key={task.created_datetime_str} />;
+          return <TaskItem task={task} key={task.id} />;
         })}
       </Stack>
     </ScrollArea>

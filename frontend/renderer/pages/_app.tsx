@@ -16,6 +16,7 @@ import { Notifications } from "@mantine/notifications";
 import { RecoilRoot, RecoilEnv } from "recoil";
 import { TasksContextProvider } from "../providers/TasksProvider";
 import { ClientIdContextProvider } from "../providers/ClientIdProvider";
+import { BackendManagerContextProvider } from "../providers/BackendManagerProvider";
 
 // https://github.com/facebookexperimental/Recoil/issues/733#issuecomment-1399410023
 RecoilEnv.RECOIL_DUPLICATE_ATOM_KEY_CHECKING_ENABLED = false;
@@ -186,16 +187,18 @@ function MyApp({ Component, pageProps }: CustomAppProps) {
   }, [Component.getLayout]);
 
   return (
-    <RecoilRoot>
-      <MantineProvider theme={mantineTheme} defaultColorScheme={"dark"}>
-        <ClientIdContextProvider>
-          <TasksContextProvider>
-            <Notifications />
-            {getLayout(<Component {...pageProps} />)}
-          </TasksContextProvider>
-        </ClientIdContextProvider>
-      </MantineProvider>
-    </RecoilRoot>
+    <MantineProvider theme={mantineTheme} defaultColorScheme={"dark"}>
+      <RecoilRoot>
+        <BackendManagerContextProvider>
+          <ClientIdContextProvider>
+            <TasksContextProvider>
+              <Notifications />
+              {getLayout(<Component {...pageProps} />)}
+            </TasksContextProvider>
+          </ClientIdContextProvider>
+        </BackendManagerContextProvider>
+      </RecoilRoot>
+    </MantineProvider>
   );
 }
 

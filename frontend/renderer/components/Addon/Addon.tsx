@@ -51,7 +51,11 @@ export function Addon({
       const changedAddons: AddonListType = [...changedInfo.addons];
       changedAddons[addonIndex] = changedAddon;
       changedInfo.addons = changedAddons;
-      updateCardCache(cardInfo.card_name, changedInfo).then((r) => {});
+      updateCardCache(cardInfo.card_name, changedInfo).then((resp) => {
+        // if (resp?.cardInfo?.addons) {
+        //   setAddon(resp.cardInfo!.addons!)
+        // }
+      });
       onAddonChanged(changedAddon);
     },
     [cardInfo],

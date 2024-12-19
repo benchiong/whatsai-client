@@ -51,19 +51,25 @@ export function WidgetSeed({
     }
 
     return seed;
-    // return Math.floor(Math.random() * max);
   }, []);
 
   const [value, setValue] = useState<number>(defaultValue ?? generationSeed());
+
   const [inputValue, setInputValue] = useState<number>(value);
   const [opened, setOpened] = useState<boolean>(false);
   const ref = useClickOutside(() => setOpened(false));
 
   useEffect(() => {
+    setValue(defaultValue ?? generationSeed());
+  }, [defaultValue]);
+
+  useEffect(() => {
     cardContext.registerOnGenerateCallback(() => {
-      const randomValue = generationSeed();
-      setValue(randomValue);
-      innerOnChange(randomValue);
+      // todo: 1.there is a bug here, when the callback run, addons will be clear, find why and fix.
+      // todo: 2.consider if the callback way is a good way, is there a better way to solve this.
+      // const randomValue = generationSeed();
+      // setValue(randomValue);
+      // innerOnChange(randomValue);
     }, "Seed");
   }, []);
 

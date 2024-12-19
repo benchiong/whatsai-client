@@ -1,23 +1,35 @@
 import { z } from "zod";
 
-export const ArtworkSchema = z.object({
-  artwork_id: z.number().optional(),
+export const PromptSchema = z.object({
   card_name: z.string(),
-  path: z.string(),
+  base_inputs: z.any(),
+  addon_inputs: z.any().nullable(),
+});
+
+export type PromptType = z.infer<typeof PromptSchema>;
+
+export const ThumbImageSchema = z.object({
+  file_path: z.string().nullable(),
+  thumb_width: z.number().nullable(),
+  thumb_height: z.any().nullable(),
+});
+
+export type ThumbImageType = z.infer<typeof ThumbImageSchema>;
+
+export const ArtworkSchema = z.object({
+  id: z.number(),
+  file_path: z.string(),
   media_type: z.string(),
-  meta_info: z.object({
-    width: z.number().nullable(),
-    height: z.number().nullable(),
-  }),
-  tags: z.array(z.string()).nullable(),
+  meta_info: z.any(),
+
   liked: z.boolean(),
   shared: z.boolean(),
-  inputs_info: z.any(),
-  addon_inputs_info: z.any(),
-  info: z.string().nullable(),
-  thumb: z.string(),
-  thumb_width: z.number(),
-  thumb_height: z.number(),
+
+  card_name: z.string(),
+  prompt: PromptSchema,
+
+  thumb: ThumbImageSchema.nullable(),
+
   created_time_stamp: z.number(),
   created_datetime_str: z.string(),
 });

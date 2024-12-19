@@ -11,14 +11,15 @@ import { LabelSingleLine } from "./LabelSingleLine";
 import { ImageLocal } from "../Image/ImageLocal";
 import { ModelDetailInfoCard } from "./ModelDetailInfoCard";
 import { Close } from "./Close";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { IconInfoSquareRounded } from "@tabler/icons-react";
 import { useModelSelectionDrawerContext } from "../../providers/ModelSelectionDrawerProvider";
 import { displayNameOfModelInfo } from "../../data-type/helpers";
+import { getModelByModelId } from "../../lib/api";
 
 export function WidgetModelCombo({
   text,
-  defaultModel = null,
+  defaultModelId = null,
   funcName = "",
   paramName = "",
   width = "100%",
@@ -27,12 +28,12 @@ export function WidgetModelCombo({
   positionIndex = null,
 }: {
   text: string;
-  defaultModel?: ModelInfoType | null;
+  defaultModelId: String | null;
   width?: number | string;
   funcName?: string;
   paramName?: string;
   optional?: boolean;
-  onChange?: (value: ModelInfoType | null) => void;
+  onChange?: (value: string | null) => void;
   positionIndex?: number | null;
 }) {
   const theme = useMantineTheme();
@@ -41,12 +42,22 @@ export function WidgetModelCombo({
 
   const _text = positionIndex ? `${text} - ${positionIndex}` : text;
 
-  const [model, setModel] = useState(defaultModel);
+  const [model, setModel] = useState<ModelInfoType | null>(null);
   const modelDrawerContext = useModelSelectionDrawerContext();
+
+  useEffect(() => {
+    if (!defaultModelId) {
+      setModel(null);
+    }
+    getModelByModelId(defaultModelId!)
+      .then((model) => setModel(model))
+      .catch((e) => console.error(e));
+  }, []);
+
   const toggleDrawer = () => {
     modelDrawerContext.toggleDrawer(_text, funcName, paramName, (model) => {
       setModel(model);
-      onChange && onChange(model);
+      onChange && onChange(model.file_name);
     });
   };
 

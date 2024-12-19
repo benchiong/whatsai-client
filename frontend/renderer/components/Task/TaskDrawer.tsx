@@ -19,7 +19,7 @@ export function TaskDrawer() {
 
       <Drawer
         lockScroll={false}
-        zIndex={500}
+        zIndex={299}
         opened={tasksContext.drawerOpened}
         position={"right"}
         onClose={() => tasksContext.setDrawerOpened(false)}

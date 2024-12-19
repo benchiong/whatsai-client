@@ -40,10 +40,10 @@ export function TaskItem({ task }: { task: TaskType }) {
           }}
           onClick={(e) => {
             e.stopPropagation();
-            if (!task.task_id) {
+            if (!task.id) {
               return;
             }
-            removeTask(task.task_id).then((r) => {
+            removeTask(task.id).then((r) => {
               taskContext.startLoop();
             });
           }}
@@ -94,7 +94,7 @@ export function TaskItem({ task }: { task: TaskType }) {
         >
           {imagesExist && (
             <ImageLocal
-              localPath={images[images.length - 1].path}
+              localPath={images[images.length - 1].file_path}
               width={180}
               height={240}
               objectFit={"contain"}

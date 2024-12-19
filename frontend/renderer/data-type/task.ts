@@ -37,9 +37,9 @@ export function taskNum2Status(num: number) {
 }
 
 export const TaskSchema = z.object({
-  task_id: z.number().nullable(),
+  id: z.number().nullable(),
   client_id: z.string(),
-  status: z.number(),
+  status: z.string(),
   prompt: z.object({
     card_name: z.string(),
     base_inputs: z.any(),
@@ -63,6 +63,7 @@ export const TaskSchema = z.object({
 
   created_time_stamp: z.number(),
   created_datetime_str: z.string(),
+  info: z.string().nullable(),
 });
 
 export type TaskType = z.infer<typeof TaskSchema>;

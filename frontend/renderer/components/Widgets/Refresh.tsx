@@ -3,14 +3,14 @@ import { Center, Loader, Tooltip, useMantineTheme } from "@mantine/core";
 import { useState } from "react";
 
 export function Refresh({
-  onClick,
+  asyncOperation,
   width = 24,
   height = 24,
   text = "Refresh models",
 }: {
   width?: number;
   height?: number;
-  onClick: () => Promise<void>;
+  asyncOperation: () => Promise<void>;
   text?: string;
 }) {
   const theme = useMantineTheme();
@@ -39,7 +39,7 @@ export function Refresh({
             onClick={(e) => {
               e.stopPropagation();
               setRefreshing(true);
-              onClick()
+              asyncOperation()
                 .then(() => {
                   setRefreshing(false);
                 })

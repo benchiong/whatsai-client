@@ -67,7 +67,7 @@ export type WidgetComboType = z.infer<typeof WidgetComboSchema>;
 export const WidgetModelComboSchema = WidgetSchema.extend({
   values_function_name: z.string(),
   values_function_params: z.any().nullable(),
-  value: ModelInfoSchema.nullable(),
+  value: z.string().nullable(),
 });
 
 export type WidgetModelComboType = z.infer<typeof WidgetModelComboSchema>;
@@ -98,7 +98,7 @@ export type GroupedWidgetsType = z.infer<typeof GroupedWidgetsSchema>;
 export const WidgetUnionsSchema = z.union([
   GroupedWidgetsSchema,
   WidgetModelComboSchema,
-  WidgetComboSchema, // the position matters, don't know why.
+  WidgetComboSchema,
   WidgetIntSchema,
   WidgetTextSchema,
   WidgetSeedSchema,
