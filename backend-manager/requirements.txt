@@ -1,0 +1,7 @@
+fastapi
+pyinstaller
+uvicorn
+pydantic
+psutil
+httpx
+loguru
