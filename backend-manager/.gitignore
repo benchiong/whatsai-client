@@ -9,4 +9,5 @@ output/
 .idea/
 .vscode/
 
-../frontend/*
+../frontend/
+../backend/
