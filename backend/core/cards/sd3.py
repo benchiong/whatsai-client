@@ -1,12 +1,9 @@
-from core.abstracts.addon import AddonOutputToReplace, AddonInputToLink
-from core.addons import Addon_Vae, Addon_LoRA, Addon_Hypernet, Addon_ControlNet, Addon_Upscale
 from core.abstracts.card import Card
 from core.comps import (
     Comp_CheckpointLoader,
     Comp_CLIPTextEncode,
     Comp_KSampler,
     Comp_EmptyLatentImage,
-    Comp_CLIPSetLastLayer,
 )
 from core.funcs import Func_VAEDecode, Func_SaveImage
 
@@ -15,8 +12,8 @@ class SD3Card(Card):
     name = 'SD3-without-clip-loader'
     meta_data = {
         'name': name,
-        'describe': "SD3(without clip loader)",
-        'display_name': "Very simple version of SD3.",
+        'display_name': "SD3(without clip loader)",
+        'describe': "Very simple version of SD3.",
 
         "pre_models": [
             {

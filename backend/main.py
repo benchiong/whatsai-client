@@ -1,12 +1,14 @@
 import asyncio
+import multiprocessing
 import threading
+from multiprocessing import Process
 
 import uvicorn
 from data_type.init import initialize_dbs
 from misc.logger import Logger
 from misc.arg_parser import is_prod, host, port
 from model_download_worker import ModelDownloadWorker
-from prompt_worker import PromptWorker
+from prompt_worker import PromptWorker, TaskQueue
 from misc.whatsai_dirs import init_file_paths
 
 
@@ -37,6 +39,8 @@ def start_download_worker():
 if __name__ == '__main__':
     init_file_paths()
     initialize_dbs()
+
     start_prompt_worker()
     start_download_worker()
+
     start_server()

@@ -7,9 +7,11 @@ from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
 from data_type.whatsai_model_info import ModelInfo
 from misc.logger import logger
 
+
 class TaskType(str, Enum):
     download_civitai_model = 'download_civitai_model'
     sync_civitai_model_info = 'sync_civitai_model_info'
+
 
 class TaskStatus(str, Enum):
     queued = 'queued'
@@ -17,6 +19,7 @@ class TaskStatus(str, Enum):
     done = 'done'
     failed = 'failed'
     canceled = 'canceled'
+
 
 class ModelDownloadTask(PyDBModel):
     task_type: str
@@ -36,6 +39,7 @@ class ModelDownloadTask(PyDBModel):
                         )
                 """
             )
+            cur.execute("CREATE INDEX IF NOT EXISTS model_download_task_idx_workload ON model_download_task(workload)")
             conn.commit()
 
     def save(self):
@@ -85,17 +89,19 @@ class ModelDownloadTask(PyDBModel):
         return model_info
 
     @classmethod
-    def get(cls, id):
+    def get(cls, id_or_workload):
         conn = cls.conn()
         with closing(conn.cursor()) as cur:
             cur.execute(
-                """SELECT * FROM model_download_task where id = ? """, (id,)
+                "SELECT * FROM model_download_task where id = ? or workload = ? ",
+                (id_or_workload, id_or_workload)
             )
             row = cur.fetchone()
             if row is None:
                 return None
             else:
                 return cls.from_row(row)
+
     @classmethod
     def get_undone_tasks(cls):
         unfinished_status = ['queued', 'processing']
@@ -130,5 +136,3 @@ class ModelDownloadTask(PyDBModel):
             rows = cur.fetchall()
 
         return [cls.from_row(row).workload for row in rows]
-
-

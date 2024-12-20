@@ -1,3 +1,4 @@
+import multiprocessing
 import threading
 import traceback
 
@@ -78,7 +79,6 @@ class PromptWorker:
         Mostly from ComfyUI, thanks.
     """
 
-    loop = None
     cached_outputs: OutputsCache = OutputsCache()
 
     old_prompt: Prompt = None
@@ -87,8 +87,7 @@ class PromptWorker:
     last_result = None
 
     @classmethod
-    def run(cls, loop):
-        cls.loop = loop
+    def run(cls, task_queue):
         logger.debug("PromptWorker start to run.")
 
         try:
@@ -172,6 +171,7 @@ class PromptWorker:
 
     @classmethod
     def execute_func(cls, func: Func, prompt: Prompt, card: Card):
+        logger.debug(f"Start to execute func {func.name}")
         if isinstance(func, Addon):
             func_outputs = func.execute(prompt.addon_inputs, cls.cached_outputs, card, func.name)
         else:

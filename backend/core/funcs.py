@@ -61,6 +61,7 @@ class Func_CheckpointLoaderSimple(Func):
             output_clip=True,
             embedding_directory=embedding_directories
         )
+
         return out[:3]
 
 

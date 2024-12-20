@@ -13,7 +13,7 @@ from data_type.whatsai_input_file import InputFile
 from data_type.whatsai_artwork import Artwork
 from misc.helpers import file_type_guess
 from misc.logger import logger
-from prompt_worker import TaskQueue
+from prompt_worker import TaskQueue, PromptWorker
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ router = APIRouter()
 async def local_card_info(card_name: str, use_cache=True):
     # fill_default_card_infos when server starts, make sure it's done before info got.
     try:
-        CardDataModel.fill_default_card_infos()
+        CardDataModel.fill_default_infos_of_card()
     except Exception as e:
         pass
 

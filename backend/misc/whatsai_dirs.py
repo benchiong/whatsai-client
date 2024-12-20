@@ -8,7 +8,6 @@ if os.name == 'nt':
 else:
     base_dir = Path.home() / 'whatsai'
 
-db_path_dir = base_dir / '_db_files__do_not_remove_me__'
 sqlite_dir = base_dir / '_db'
 model_info_images_dir = base_dir / 'files' / 'model_info_images'
 media_files_dir = base_dir / 'files' / 'media_files'
@@ -22,7 +21,6 @@ audio_dir = output_dir / 'audios'
 other_dir = output_dir / 'others'
 
 file_dirs_to_init = [
-    db_path_dir,
     sqlite_dir,
     model_info_images_dir,
     media_files_dir,
@@ -40,6 +38,7 @@ def init_file_paths():
     for file_path in file_dirs_to_init:
         file_path.mkdir(exist_ok=True, parents=True)
 
+
 def get_dir_of_media_type(media_type: MediaType):
     if media_type == 'image':
         return img_dir
@@ -49,4 +48,3 @@ def get_dir_of_media_type(media_type: MediaType):
         return audio_dir
     else:
         return other_dir
-

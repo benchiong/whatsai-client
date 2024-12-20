@@ -20,9 +20,11 @@ class CivitaiModelIfoOfVersion(PyDBModel):
     nsfw: Optional[bool] = None
     poi: Optional[bool] = None
 
+
 class CivitaiFileToDownload(PyDBModel):
     civitaiFile: CivitaiFile
     modelType: str  # where the user put the file according the modelType.
+
 
 class CivitaiModelVersion(PyDBModel):
     modelId: Optional[int] = None
@@ -56,9 +58,11 @@ class CivitaiModelVersion(PyDBModel):
             )
             cur.execute("CREATE INDEX IF NOT EXISTS civit_model_version_idx_name ON civit_model_version(name)")
             conn.commit()
+
     @classmethod
     def init(cls):
         cls.create_table()
+
     def save(self):
         conn = self.conn()
         with closing(conn.cursor()) as cur:
@@ -110,6 +114,7 @@ class CivitaiModelVersion(PyDBModel):
             downloadUrl=row[9]
         )
         return model_dir
+
     @classmethod
     def get(cls, id_or_name):
         conn = cls.conn()
@@ -122,9 +127,3 @@ class CivitaiModelVersion(PyDBModel):
                 return None
             else:
                 return cls.from_row(row)
-
-
-
-
-
-

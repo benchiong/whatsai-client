@@ -1,5 +1,5 @@
 # from https://github.com/zanllp/sd-webui-infinite-image-browsing, thanks
-
+import sqlite3
 import threading
 import re
 from sqlite3 import Connection, connect
@@ -12,21 +12,27 @@ from misc.whatsai_dirs import sqlite_dir
 
 sqlite_db_path = sqlite_dir / 'sqlite.db'
 
+
 class DB:
     local = threading.local()
-
-    _initing = False
 
     num = 0
 
     path = str(sqlite_db_path)
+    sqlite_dir.mkdir(exist_ok=True, parents=True)
     sqlite_db_path.touch(exist_ok=True)
 
     @classmethod
     def get_conn(clz) -> Connection:
         # for : sqlite3.ProgrammingError: SQLite objects created in a thread can only be used in that same thread
         if hasattr(clz.local, "conn"):
-            return clz.local.conn
+
+            try:
+                clz.local.conn.execute("SELECT 1")
+                return clz.local.conn
+
+            except sqlite3.ProgrammingError:
+                clz.local.conn = clz.init()
         else:
             conn = clz.init()
             clz.local.conn = conn
@@ -39,7 +45,8 @@ class DB:
 
     @classmethod
     def init(clz):
-        conn = connect(clz.get_db_file_path())
+        conn = connect(clz.get_db_file_path(), check_same_thread=False)
+        conn.execute('PRAGMA journal_mode=WAL;')
 
         def regexp(expr, item):
             if not isinstance(item, str):
@@ -49,9 +56,12 @@ class DB:
 
         conn.create_function("regexp", 2, regexp)
         clz.num += 1
+
         if not is_prod:
             print(f"Connection count: {clz.num}")
+            
         return conn
+
 
 class PyDBModel(BaseModel):
     id: Optional[int] = None

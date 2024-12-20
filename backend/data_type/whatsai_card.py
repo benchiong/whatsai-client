@@ -171,10 +171,8 @@ class CardDataModel(PyDBModel):
 
         cards_to_insert = []
         for card_name in BUILTIN_CARDS_MAP.keys():
-            print(card_name, type(card_name))
             card_class = BUILTIN_CARDS_MAP.get(card_name)
             meta_data = card_class.meta_data
-            print(meta_data)
             created_time_stamp, created_datetime_str = get_now_timestamp_and_str()
             card = cls(
                 card_name=card_name,
@@ -193,9 +191,12 @@ class CardDataModel(PyDBModel):
         cls.insert_many(cards_to_insert)
 
     @classmethod
-    def fill_default_card_infos(cls):
-        """ The reason we don't do this at table init stage is at that time addon infos are
-            not ready yet, we will fail, so put it later when server try to start
+    def fill_default_infos_of_card(cls):
+        """ Fill the default card info of a card.
+
+        // Not sure if it's still the case.
+        The reason we don't do this at table init stage is at that time addon infos are
+        not ready yet, we will fail, so put it later when server try to start
         """
         cards_to_full = cls.get_cards_without_default_card_info()
         for card in cards_to_full:

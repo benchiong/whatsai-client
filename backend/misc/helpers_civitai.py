@@ -46,28 +46,29 @@ def_headers_to_request_civitai = {
 
 async def get_civitai_model_info_by_hash(hash_str: str):
     if not hash_str:
-        return None, "Hash_str is required."
+        return False, None, "Hash_str is required."
 
     url = civitai_url_dict["hash"] + hash_str
     try:
         cached_result = JsonCache.get("get_civitai_model_info_by_hash", hash_str)
         if cached_result:
-            return cached_result, None
+            return True, cached_result, None
 
         resp = await async_get(url, headers=def_headers_to_request_civitai)
         if resp is None:
-            return None, "get_civitai_model_info_by_hash async_get error, hash: {}".format(hash_str)
+            return False, None, "get_civitai_model_info_by_hash async_get error, hash: {}".format(hash_str)
 
         if resp.status_code == 404:
-            return None, "Model version info not found on civitai, the hash_str id: {}".format(hash_str)
+            return False, None, "Model version info not found on civitai, the hash_str id: {}".format(hash_str)
 
         resp_content = resp.json()
         JsonCache.add("get_civitai_model_info_by_hash", hash_str, resp_content)
-        return resp_content, None
+        return True, resp_content, None
     except Exception as e:
         logger.debug("get_civitai_model_info_by_hash error:", e)
         traceback.print_exc()
-        return None, str(e)
+        return False, None, str(e)
+
 
 def sync_get_civitai_model_info_by_hash(hash_str: str):
     if not hash_str:
@@ -169,6 +170,7 @@ async def is_content_type_image(url):
 
     return content_type and 'image' in content_type
 
+
 def sync_is_content_type_image(url):
     cached_result = JsonCache.get('is_content_type_image', url)
     if not cached_result:
@@ -228,6 +230,7 @@ def sync_get_real_image_info(image_infos: list[dict]):
             continue
     return first_img_info
 
+
 async def get_image_url_of_civitai_model_info(civitai_model_info: dict):
     image_infos = civitai_model_info.get('images')
     if not image_infos:
@@ -238,6 +241,7 @@ async def get_image_url_of_civitai_model_info(civitai_model_info: dict):
         return None
 
     return image_info.get('url')
+
 
 def sync_get_image_url_of_civitai_model_info(civitai_model_info: dict):
     image_infos = civitai_model_info.get('images')
@@ -263,6 +267,7 @@ async def try_to_make_sure_first_image_is_real_image(civit_model_version_info: d
 
     images[0] = image_info_with_maybe_real_image
     civit_model_version_info['images'] = images
+
 
 def sync_try_to_make_sure_first_image_is_real_image(civit_model_version_info: dict | None):
     if not civit_model_version_info:
@@ -369,6 +374,7 @@ def file_to_download_2_model_download_info(
 
     return model_downloading_info, None
 
+
 def download_civitai_model_task(download_model_info: ModelDownloadingInfo):
     while True:
         try:
@@ -381,6 +387,7 @@ def download_civitai_model_task(download_model_info: ModelDownloadingInfo):
         except Exception as e:
             traceback.print_exc()
             logger.debug(e)
+
 
 def download_civitai_model_worker(model_downloading_info: ModelDownloadingInfo, task: ModelDownloadTask):
     """ Mostly from:
@@ -467,6 +474,7 @@ def download_civitai_model_worker(model_downloading_info: ModelDownloadingInfo, 
 
     return True, local_path
 
+
 def update_downloading_record(
         download_model_info: ModelDownloadingInfo,
         origin_downloaded_time: float,
@@ -499,6 +507,7 @@ def update_downloading_record(
     task.workload = download_model_info
     download_model_info.save()
     task.save()
+
 
 async def download_civitai_image_to_whatsai_file_dir(url: str):
     if not url:
