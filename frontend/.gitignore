@@ -10,9 +10,11 @@ node_modules
 .node_modules/
 built/*
 
-**/backend-manager
+assets/backend-manager
+app/
 
 **/.DS_Store
 yarn.lock
 yarn-error.log
 .parallelperf.*
+

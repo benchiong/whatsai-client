@@ -54,10 +54,6 @@ export default function HomePage() {
   });
   const [fontSize, setFontSize] = useRecoilState(fontSizeState);
 
-  window.ipc.on(backendManager, (managerUrl) => {
-    console.log("managerUrl:", managerUrl);
-  });
-
   return (
     <>
       <Head>
@@ -189,15 +185,7 @@ export default function HomePage() {
           >
             removeTask
           </Button>
-          <Button
-            onClick={() => {
-              getArtworks().then((r) => {
-                console.log(r);
-              });
-            }}
-          >
-            removeTask
-          </Button>
+
           <Button
             onClick={() => {
               getModels().then((r) => {
@@ -248,14 +236,6 @@ export default function HomePage() {
             }}
           >
             getArtwork
-          </Button>
-
-          <Button
-            onClick={() => {
-              window.ipc.send(backendManager, eventBackendManagerUrl);
-            }}
-          >
-            IPC Test
           </Button>
         </Stack>
       </Container>

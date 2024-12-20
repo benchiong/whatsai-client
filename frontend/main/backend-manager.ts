@@ -4,11 +4,12 @@ import fs from "fs";
 import { ipcMain } from "electron";
 import { backendManager } from "./ipc-constants";
 import { eventBackendManagerUrl } from "./ipc-constants";
+import { debug_manager, debug_manager_url } from "./debug";
 
-const isProd = process.env.NODE_ENV === "production";
-
-export let managerUrl = isProd ? null : "http://127.0.0.1:8820/";
-
+export let managerUrl = null;
+if (debug_manager) {
+  managerUrl = debug_manager_url;
+}
 export class BackendManager {
   private process: ChildProcess | null = null;
   private readonly executablePath: string;
@@ -42,7 +43,7 @@ export class BackendManager {
 
         this.process = spawn(
           this.executablePath,
-          ["--port", this.port.toString()],
+          ["--port", this.port.toString(), "--prod"],
           {
             stdio: "inherit",
           },
@@ -55,6 +56,7 @@ export class BackendManager {
 
         this.process.on("exit", (code) => {
           console.log(`Process exited with code: ${code}`);
+
           if (code !== 0 && this.monitor) {
             console.log("Process crashed. Restarting...");
             this.startProcess();
@@ -75,6 +77,7 @@ export class BackendManager {
       const managerServerUrl = this.managerUrl();
       const killSelfUrl = `${managerServerUrl}process/kill_self`;
       console.log("killSelfUrl:", killSelfUrl);
+
       if (!killSelfUrl) {
         console.log("empty killSelfUrl");
         return;
@@ -145,5 +148,6 @@ export class BackendManager {
 ipcMain.on(backendManager, async (event, event_type: string) => {
   if (event_type == eventBackendManagerUrl) {
     event.reply(backendManager, managerUrl);
+    console.log("IPC main:", managerUrl);
   }
 });

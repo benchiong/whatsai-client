@@ -38,7 +38,7 @@ export default function CardDetail() {
         if (resp?.cardInfo) {
           setCardInfo(resp.cardInfo);
         } else {
-          console.log(resp.errorMessage);
+          console.log(resp?.errorMessage);
         }
       });
     },

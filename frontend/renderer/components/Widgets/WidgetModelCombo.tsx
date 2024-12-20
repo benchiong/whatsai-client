@@ -28,7 +28,7 @@ export function WidgetModelCombo({
   positionIndex = null,
 }: {
   text: string;
-  defaultModelId: String | null;
+  defaultModelId: string | null;
   width?: number | string;
   funcName?: string;
   paramName?: string;

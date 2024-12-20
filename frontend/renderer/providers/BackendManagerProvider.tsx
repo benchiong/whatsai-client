@@ -22,15 +22,19 @@ import {
   Title,
 } from "@mantine/core";
 import { z } from "zod";
+import {
+  debug_backend,
+  debug_backend_server_url,
+  debug_manager,
+  debug_manager_url,
+} from "../../main/debug";
 
 export type BackendManagerContextType = {
-  isBackendManagerReady: boolean;
+  isManagerReady: boolean;
   isBackendReady: boolean | null; // null for unknown
-  managerBackendUrl: string | null;
+  managerUrl: string | null;
   backendUrl: string | null;
 };
-
-const isProd = process.env.NODE_ENV === "production";
 
 export const BackendManagerContext =
   createContext<BackendManagerContextType | null>(null);
@@ -58,44 +62,106 @@ const ProgressTypeSchema = z.object({
 
 type ProgressType = z.infer<typeof ProgressTypeSchema>;
 
-interface UseIntervalReturnType {
-  start: () => void;
-  stop: () => void;
-  toggle: () => void;
-  active: boolean;
-}
-
-// todo: rubbish here, refactor
 export function BackendManagerContextProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const theme = useMantineTheme();
-  const [managerBackendUrl, setManagerBackendUrl] = useState<string | null>(
-    null,
-  );
+  const [managerUrl, setManagerUrl] = useState<string | null>(null);
   const [backendUrl, setBackendUrl] = useState<string | null>(null);
 
-  // leave them, used for instance state, urls are used initial state.
-  const [isBackendManagerReady, setIsBackendManagerReady] = useState(false);
+  const [isManagerReady, setIsManagerReady] = useState(false);
   const [isBackendReady, setIsBackendReady] = useState<boolean | null>(null);
+
+  // We need it because when backend is ready, it can be not running to response.
   const [isBackendRunning, setIsBackendRunning] = useState<boolean>(false);
 
+  // The install progress after people click the installation button.
   const [progress, setProgress] = useState<ProgressType | null>(null);
 
+  /*  There are 3 Intervals(loops) here:
+      1.loop to get managerUrl, then app can communicate with it to get backend server status, how we get
+        the url is through IPC, keep looping to ask if app started backend-manager exe file;
+      2.After managerUrl set, which means the manager is ready, then we loop to ask if the backend is ready,
+        backend's readiness has two steps:
+          a. python env/requirements/backend source codes are ready, then people has no necessary to install;
+          b. backend server started to response, the state is hold by isBackendRunning
+        the two already, we go over from here;
+      3.When people's python env(venv/requirements/codes) is not ready, he/she will get an install button,
+        installProgressInfoInterval starts then.
+   */
+
   // loop to wait backend manager to be ready through ipc of electron, it's very beginning
-  const interval = useInterval(() => {
+  const managerUrlInterval = useInterval(() => {
     window.ipc.send(backendManager, eventBackendManagerUrl);
   }, 1000);
 
-  const requestInstallProgressInfo = () => {
-    if (!managerBackendUrl) {
+  // loop to require if backend server is ready, **not** the manager server.
+  const isBackendReadyInterval = useInterval(() => {
+    if (!managerUrl) {
       console.log("empty managerBackendUrl");
       return;
     }
-    console.log("requestInstallProgressInfo");
-    fetch(`${managerBackendUrl}install_progress_info`, {
+    requestIfBackendReady();
+  }, 1000);
+
+  // loop to require what progress of the installation is, start after people click start install button.
+  const installProgressInfoInterval = useInterval(() => {
+    if (!managerUrl) {
+      console.log("empty managerBackendUrl");
+      return;
+    }
+    requestProgressInfo();
+  }, 1000);
+
+  useEffect(() => {
+    if (debug_backend) {
+      return;
+    }
+
+    managerUrlInterval.start();
+
+    window.ipc.on(backendManager, (managerUrl) => {
+      if (managerUrl) {
+        setManagerUrl(managerUrl.toString());
+        setIsManagerReady(true);
+        managerUrlInterval.stop();
+        console.log("backendManager started.");
+
+        isBackendReadyInterval.start();
+      }
+    });
+  }, []);
+
+  // make sure backend is ready.
+  const requestIfBackendReady = useCallback(() => {
+    console.log("requestIfBackendReady managerBackendUrl:", managerUrl);
+    if (!managerUrl) {
+      return;
+    }
+    fetch(`${managerUrl}is_backend_ready`, {
+      method: "GET",
+    })
+      .then((response) => {
+        response.json().then((resp) => {
+          const { ready, port, backend_running } = resp;
+
+          if (port) {
+            const backendUrl = `http://127.0.0.1:${port}/`;
+            setBackendUrl(backendUrl);
+          }
+          setIsBackendReady(ready);
+          setIsBackendRunning(backend_running);
+          isBackendReadyInterval.stop();
+        });
+      })
+      .catch((e) => {
+        console.log("get backend port error:", e);
+      });
+  }, [managerUrl]);
+
+  const requestProgressInfo = useCallback(() => {
+    fetch(`${managerUrl}install_progress_info`, {
       method: "GET",
     })
       .then((response) => {
@@ -106,18 +172,18 @@ export function BackendManagerContextProvider({
               "Parse progress response error:",
               progress_parsed_result.error.issues,
             );
-            installProgressInfoInterval.stop();
             return;
           }
+
           const p = progress_parsed_result.data;
-          console.log("Progress:", p);
           setProgress(p);
+
           if (p.stage == "ready") {
             installProgressInfoInterval.stop();
-            backendReady();
+            requestIfBackendReady();
           } else if (p.stage == "failed") {
             installProgressInfoInterval.stop();
-            backendReady();
+            requestIfBackendReady();
           }
         });
       })
@@ -125,87 +191,38 @@ export function BackendManagerContextProvider({
         console.log("requestInstallProgressInfo error:", e);
         installProgressInfoInterval.stop();
       });
-  };
+  }, [managerUrl]);
 
-  // loop to listen what progress of the installation
-  const installProgressInfoInterval = useInterval(() => {
-    requestInstallProgressInfo();
-  }, 1000);
-
-  useEffect(() => {
-    window.ipc.on(backendManager, (managerUrl) => {
-      if (managerUrl) {
-        setManagerBackendUrl(managerUrl.toString());
-        setIsBackendManagerReady(true);
-        interval.stop();
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!isProd) {
-      setIsBackendReady(true);
-      setIsBackendRunning(true);
-      return;
-    }
-    if (!managerBackendUrl) {
-      return;
-    }
-    backendReady();
-  }, [managerBackendUrl]);
-
-  // make sure backend is ready.
-  const backendReady = () => {
-    if (!managerBackendUrl) {
-      return;
-    }
-    fetch(`${managerBackendUrl}is_backend_ready`, {
-      method: "GET",
-    })
-      .then((response) => {
-        response.json().then((resp) => {
-          const { ready, port, backend_running } = resp;
-          if (port) {
-            const backendUrl = `http://127.0.0.1:${port}/`;
-            setBackendUrl(backendUrl);
-          }
-          setIsBackendReady(ready);
-          setIsBackendRunning(backend_running);
-        });
-      })
-      .catch((e) => {
-        console.log("get backend port error:", e);
-      });
-  };
-
+  // install python/requirements/source codes.
   const install_everything = useCallback(() => {
-    if (!managerBackendUrl) {
+    if (!managerUrl) {
       return;
     }
-    fetch(`${managerBackendUrl}install_everything`, {
+    fetch(`${managerUrl}install_everything`, {
       method: "GET",
     })
       .then((r) => {})
       .catch((e) => {
         console.log("get backend port error:", e);
       });
-  }, [managerBackendUrl]);
+  }, [managerUrl]);
 
-  useEffect(() => {
-    interval.start();
-  }, [managerBackendUrl]);
+  const _manageUrl = debug_manager ? debug_manager_url : managerUrl;
+  const _isManagerReady = debug_manager ? true : isManagerReady;
+  const _backendUrl = debug_backend ? debug_backend_server_url : backendUrl;
+  const _isBackendReady = debug_backend ? true : isBackendReady;
 
   return (
     <BackendManagerContext.Provider
       value={{
-        managerBackendUrl,
-        backendUrl,
-        isBackendManagerReady,
-        isBackendReady,
+        managerUrl: _manageUrl,
+        backendUrl: _backendUrl,
+        isManagerReady: _isManagerReady,
+        isBackendReady: _isBackendReady,
       }}
     >
       {children}
-      {!isBackendRunning && (
+      {!debug_backend && !isBackendRunning && (
         <Overlay
           style={{
             position: "fixed",
@@ -223,7 +240,12 @@ export function BackendManagerContextProvider({
                 progress={progress}
                 setProgress={setProgress}
                 install_everything={install_everything}
-                installProgressInfoInterval={installProgressInfoInterval}
+                onInstallButtonClick={() => {
+                  installProgressInfoInterval.start();
+                  if (isBackendReadyInterval.active) {
+                    isBackendReadyInterval.stop();
+                  }
+                }}
               />
             ) : (
               <Image src={"/images/logo.png"} w={100} h={100} />
@@ -239,16 +261,14 @@ function InstallButtonOrProgressInfo({
   progress,
   install_everything,
   setProgress,
-  installProgressInfoInterval,
+  onInstallButtonClick,
 }: {
   progress: ProgressType | null;
   setProgress: (p: ProgressType) => void;
   install_everything: () => void;
-  installProgressInfoInterval: UseIntervalReturnType;
+  onInstallButtonClick: () => void;
 }) {
   const theme = useMantineTheme();
-
-  console.log(progress);
 
   if (!progress) {
     return (
@@ -258,11 +278,11 @@ function InstallButtonOrProgressInfo({
         onClick={(e) => {
           e.stopPropagation();
           install_everything();
-          installProgressInfoInterval.start();
           setProgress({
             stage: "Installing python backend...",
             info: "",
           });
+          onInstallButtonClick();
         }}
       >
         Install python backend

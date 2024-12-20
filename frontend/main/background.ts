@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import serve from "electron-serve";
 import { createWindow } from "./helpers";
 import { BackendManager } from "./backend-manager";
+import { debug_backend, debug_manager } from "./debug";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -20,6 +21,7 @@ const create_main_window = async () => {
   };
 
   const mainWindow = createWindow("main", options);
+
   if (isProd) {
     await mainWindow.loadURL("app://./home");
   } else {
@@ -37,29 +39,40 @@ const create_main_window = async () => {
 })();
 
 let backendManager: BackendManager | null = null;
+
 (async () => {
-  if (!isProd) {
-    console.log("Dev env found, manually start backend please.");
+  if (debug_manager || debug_backend) {
     return;
   }
-  const pythonExePath = path.join(__dirname, "backend-manager");
+
+  const pythonExePath = app.isPackaged
+    ? path.join(process.resourcesPath, "assets", "backend-manager")
+    : path.join(__dirname, "../assets", "backend-manager");
+
+  console.log(pythonExePath);
+
   backendManager = new BackendManager(pythonExePath);
   await backendManager.startProcess();
 })();
 
 let stopping = false;
 app.on("before-quit", (event) => {
-  if (!stopping && isProd) {
+  if (debug_manager || debug_backend) {
+    return;
+  }
+
+  if (!stopping) {
     stopping = true;
     event.preventDefault();
+
     if (backendManager) {
       try {
         backendManager.stopProcess().then(() => {
-          console.log("before-quit stoprocess");
+          console.log("before-quit stop process.");
           app.quit();
         });
       } catch (e) {
-        console.error("stopPythonBackendManager failed:", e);
+        console.error("Stop Python Backend Manager failed:", e);
         app.quit();
       }
     }
@@ -78,6 +91,7 @@ app.on("activate", async () => {
   }
 });
 
+// demo code from nextron, leave here in case I forget how to write it, how idiot am I....
 ipcMain.on("message", async (event, arg) => {
   event.reply("message", `${arg} World!`);
 });

@@ -56,8 +56,8 @@ export default function ArtworksPage() {
           {artworks.map((artwork, index) => {
             return (
               <Stack
-                width={180}
-                height={240}
+                w={180}
+                h={240}
                 bg={theme.colors.waLight[1]}
                 style={{
                   cursor: "pointer",

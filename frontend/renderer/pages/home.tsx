@@ -10,7 +10,14 @@ export default function HomePage() {
   const [cards, setCards] = useState<SimpleCardInfoType[]>([]);
   const backendManagerContext = useBackendManagerContext();
   useEffect(() => {
-    getAllCards().then((cards) => setCards(cards));
+    if (!backendManagerContext.isBackendReady) {
+      return;
+    }
+    getAllCards()
+      .then((cards) => setCards(cards))
+      .catch((e) => {
+        console.log("getAllCards error:", e);
+      });
   }, [backendManagerContext.isBackendReady]);
 
   return (
