@@ -4,4 +4,3 @@ uvicorn
 pydantic
 psutil
 httpx
-loguru

@@ -35,7 +35,7 @@ def is_apple_m_series_chip():
                 return "M" in chip_info
         return False
     except Exception as e:
-        logger.info("is_apple_m_series_chip error:", e)
+        logger.info(f"is_apple_m_series_chip error: {e}")
         return False
 
 def win_gpu():

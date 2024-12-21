@@ -40,7 +40,7 @@ class AsyncProcessManager:
                 await self.process.wait()
                 self.process = None
             except Exception as e:
-                logger.info("stop_process error:", e)
+                logger.info(f"stop_process error: {e}")
 
     async def read_output(self):
         if self.process:

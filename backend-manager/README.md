@@ -6,4 +6,5 @@ solve problem, hope it works.
 package it as an executable file then copy to frontend and package them all.
 
 how to package:
-pyinstaller main.spec
+
+ pyinstaller --clean main.spec

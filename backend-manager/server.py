@@ -132,13 +132,18 @@ def add_possible_python_paths():
 
     current_path = os.environ.get('PATH', '')
 
+    logger.debug(f"is_macos: {is_macos}")
     if is_macos:
         homebrew_path = "/opt/homebrew/bin"
         macos_system_python = "/usr/local/bin"
-        for path in [homebrew_path, macos_system_python]:
+        python_312_path = "/Library/Frameworks/Python.framework/Versions/3.12/bin"
+
+        for path in [homebrew_path, macos_system_python, python_312_path]:
             if os.path.exists(path) and path not in current_path:
                 os.environ['PATH'] = f"{path}{os.pathsep}{os.environ['PATH']}"
                 logger.info(f"Added {path} to PATH")
+            else:
+                logger.info(f"{path} not exists.")
 
     if is_win:
         windows_paths = [
@@ -153,6 +158,7 @@ def add_possible_python_paths():
 
 async def run_backend():
     global _backend_port
+    logger.info(f"is_python_ready: {is_python_ready()} is_backend_codes_ready: {is_backend_codes_ready()}")
     if is_python_ready() and is_backend_codes_ready():
         python_executable = find_python_venv_executable_path()
         backend_main = backend_local_path / 'main.py'

@@ -184,7 +184,7 @@ def install_pytorch():
         install_command = None
 
     if not install_command:
-        logger.info("Unsupported gpu:", gpu)
+        logger.info(f"Unsupported gpu: {gpu}")
         return
 
     try:

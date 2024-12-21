@@ -1,75 +1,39 @@
-# ref: https://gist.github.com/nkhitrov/a3e31cfcc1b19cba8e1b626276148c49, thanks.
-
 import logging
-from types import FrameType
-from typing import cast
-
-from loguru import logger as loguru_logger
+from logging.handlers import TimedRotatingFileHandler
+from pathlib import Path
 
 from common import base_dir
 
-log_dir = base_dir / 'log' / 'backend_manager_log'
+# Assuming base_dir is already defined somewhere in your code
+log_dir = Path(base_dir) / 'log' / 'backend_manager_log'
 
 if not log_dir.exists():
     log_dir.mkdir(parents=True)
 
+# Define the log file path
+log_path = log_dir / "whatsai_manager_log.log"
 
-class Logger:
-    def __init__(self):
-        log_path = log_dir / "whatsai_manager_log_{time:YYYY-MM-DD}.log"
-        self.loguru_logger = loguru_logger
-        self.loguru_logger.remove()
+# Create a logger instance
+logger = logging.getLogger("backend_manager")
+logger.setLevel(logging.DEBUG)  # Set the logging level
 
-        self.loguru_logger.add(
-            log_path,
-            format='{time:YYYY-MM-DD HH:mm:ss} - '
-                   "{process.name} | "
-                   "{thread.name} | "
-                   '{module}.{function}:{line} - {level} -{message}',
-            encoding='utf-8',
-            retention='7 days',
-            backtrace=True,
-            diagnose=True,
-            enqueue=True,
-            rotation="00:00"
-        )
+# Create a TimedRotatingFileHandler for daily log rotation (7 days retention)
+handler = TimedRotatingFileHandler(
+    log_path,
+    when="midnight",  # Rotate at midnight
+    interval=1,  # Rotate every 1 day
+    backupCount=7,  # Keep the last 7 days of logs
+    encoding="utf-8"
+)
 
-    @classmethod
-    def init_config(cls):
-        logging.basicConfig(handlers=[InterceptHandler()], level=0)
-        LOGGER_NAMES = ("uvicorn", "uvicorn.asgi", "uvicorn.access", "fastapi", "unicorn.error")
-        # change handler for default uvicorn logger
-        handler = InterceptHandler()
-        logging.getLogger().handlers = [handler]
-        for logger_name in LOGGER_NAMES:
-            logging.getLogger(logger_name).handlers = [InterceptHandler()]
-            logging.getLogger(logger_name).propagate = False
+# Create a log formatter
+formatter = logging.Formatter(
+    '%(asctime)s - %(processName)s | %(threadName)s | '
+    '%(module)s.%(funcName)s:%(lineno)d - %(levelname)s - %(message)s'
+)
 
-        logging.root.addHandler(handler)
+# Add the formatter to the handler
+handler.setFormatter(formatter)
 
-
-    def get_logger(self):
-        return self.loguru_logger
-
-class InterceptHandler(logging.Handler):
-
-    def emit(self, record: logging.LogRecord) -> None:  # pragma: no cover
-        # Get corresponding Loguru level if it exists
-        try:
-            level = loguru_logger.level(record.levelname).name
-        except ValueError:
-            level = str(record.levelno)
-
-        # Find caller from where originated the logged message
-        frame, depth = logging.currentframe(), 2
-        while frame.f_code.co_filename == logging.__file__:  # noqa: WPS609
-            frame = cast(FrameType, frame.f_back)
-            depth += 1
-        logger = loguru_logger.bind(request_id='app')
-        logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage(),
-        )
-
-# todo: not works properly for uvicorn, fix it.
-Logger.init_config()
-logger = Logger().get_logger()
+# Add the handler to the logger
+logger.addHandler(handler)
