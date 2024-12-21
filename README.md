@@ -26,7 +26,8 @@ to join me, let's do something really easy to use!
   cards on the road, believe me!
 * Come on and have a try, even it's buggy, but it's a very good start!!
 * One more thing, WhatsAI is a client can be setup with one click, no terminal things at all, I almost forget it 
-  because I always think it's a feature everyone will agree, LoL! [Still working on]
+  because I always think it's a feature everyone will agree, LoL!
+  [MacOS first version is ready, see realeas for detail]
 
 # Early version here
 Lots of working is still undone, bugs a lot. Don't worry, I will fix them asap. Fighting!
