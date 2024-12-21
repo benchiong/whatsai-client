@@ -17,6 +17,9 @@ const create_main_window = async () => {
   const options = {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
+      allowRunningInsecureContent: true,
+      nodeIntegration: true,
+      webSecurity: false, // to load local image files.
     },
   };
 

@@ -39,7 +39,7 @@ export class BackendManager {
         }
         this.port = port;
 
-        console.log("this.port", this.port);
+        console.log("Port", this.port, "executablePath:", this.executablePath);
 
         this.process = spawn(
           this.executablePath,

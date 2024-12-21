@@ -43,7 +43,7 @@ class SDOutpaintingCard(Card):
 
         positive_prompt = Comp_CLIPTextEncode(
             name='positive_prompt',
-            default_value='beautiful scenery nature glass bottle landscape, , purple galaxy bottle,',
+            default_value='outdoors in the yosemite national park mountains nature',
         )
         positive_prompt.change_param_name_and_display_name('text', 'positive_prompt', 'Prompt')
         self.link(clip, positive_prompt.inputs.clip)

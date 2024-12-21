@@ -145,7 +145,7 @@ export function BackendManagerContextProvider({
       .then((response) => {
         response.json().then((resp) => {
           const { ready, port, backend_running } = resp;
-
+          console.log(ready, port, backend_running);
           if (port) {
             const backendUrl = `http://127.0.0.1:${port}/`;
             setBackendUrl(backendUrl);
@@ -180,10 +180,9 @@ export function BackendManagerContextProvider({
 
           if (p.stage == "ready") {
             installProgressInfoInterval.stop();
-            requestIfBackendReady();
+            isBackendReadyInterval.start();
           } else if (p.stage == "failed") {
             installProgressInfoInterval.stop();
-            requestIfBackendReady();
           }
         });
       })

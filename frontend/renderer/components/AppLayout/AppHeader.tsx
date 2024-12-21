@@ -49,8 +49,8 @@ export function AppHeader() {
     >
       <Stack h={500} align={"center"} gap={40} mt={40}>
         <NavItem href={"/home/"} icon={"IconPlayCard5"} text={"Cards"} />
-        <NavItem href={"/artworks/"} icon={"IconPhotoAi"} text={"Artworks"} />
         <NavItem href={"/models/"} icon={"IconFile3d"} text={"Models"} />
+        <NavItem href={"/artworks/"} icon={"IconPhotoAi"} text={"Artworks"} />
         {!isProd && (
           <NavItem
             href={"/playground/"}

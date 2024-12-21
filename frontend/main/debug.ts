@@ -13,7 +13,7 @@
     2.start backend server(backend dir) and python main.py, get the url and set it to
       debug_backend_server_url manually
  */
-export const debug_manager = true;
+export const debug_manager = false;
 export const debug_manager_url = "http://127.0.0.1:8820/";
 
 export const debug_backend = false;
