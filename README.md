@@ -12,38 +12,31 @@
 
 </div>
 
+
 ### Key Features
+
 - Modern UI based on React/Mantine: sexy, simple and powerful 👠🪶💪 
 - One-click installation, no complex scripts needed 🚀🚀🚀
 - Excellent extensibility, easily turn any Comfy Workflow into a WhatsAI Card 🪄🧙‍♂️✨
 
-### Swear Features
-* WebUI/ComfyUI dir auto management, just tell WhatsAI where you put them, the models will be added;
-* CivitAI model downloader, with file hash, WhatsAI will download the info for you, make models very beautiful 
-* No workflow things, one workflow can be translated to a card in  WhatsAI, it's very cool both for common user
-  and workflow developer, once published, share everywhere;
-* Thanks ComfyUI, whatsAI's previewer is ready to use, no more other options;
-* The Addons are very concept clear, LoRA/VAE/Contronet/UPScaler/Hypernet, and you can choose yourself very free,
-  no need to figure out how it works,
-* With the design of Comp, cards and addons are very Modular, with the design of Widget, backend can easily tell 
-  backend how to render, cool thing~
-* The cards pages already have SD1.x, SDXL, SD3 there, one click to generate, no more other work need, and more
-  cards on the road, believe me!
-* Come on and have a try, even it's buggy, but it's a very good start!!
-* One more thing, WhatsAI is a client can be setup with one click, no terminal things at all, I almost forget it 
-  because I always think it's a feature everyone will agree, LoL!
-  [MacOS first version is ready, see realeas for detail]
+
+### Lovely Features 🐾🐾 
+
+- WebUI/ComfyUI dir auto management: Simply tell WhatsAI where you placed them, and it will automatically add the models.
+- CivitAI model downloader: With file hash, WhatsAI will fetch the information for you, making models look stunning.
+- Artwork viewer: Effortlessly view your generated results, from a list to detailed view, it’s simple and intuitive.
+- Addons with clear concepts: LoRA/VAE/Contronet/UPScaler/Hypernet. Choose what you need with ease, no need to figure out how they work.
+- Comp-based design: Cards and addons are highly modular. With the Widget design, the backend seamlessly communicates with the frontend on how to render. Cool, right?
 
 
 ![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
 
 
-# Early version here
-Lots of working is still undone, bugs a lot. Don't worry, I will fix them asap. Fighting!
 
 
 
-# Credits
+
+## Credits
 - ComfyUI - https://github.com/comfyanonymous/ComfyUI
 - CivitAI - https://github.com/civitai/civitai
 - WebUI   - https://github.com/AUTOMATIC1111/stable-diffusion-webui
@@ -51,9 +44,4 @@ Lots of working is still undone, bugs a lot. Don't worry, I will fix them asap. 
 - ComfyBox - https://github.com/space-nuko/ComfyBox
 - CivitAI Helper - https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper
 - Stable Diffusion webui Infinite Image Browsing - https://github.com/zanllp/sd-webui-infinite-image-browsing
-
-- Nextron - https://github.com/saltyshiomix/nextron
-- Mantine - https://github.com/mantinedev/mantine
-- FastAPI - https://github.com/fastapi/fastapi
-- TinyDB  - https://github.com/msiemens/tinydb
 
