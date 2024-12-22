@@ -13,12 +13,10 @@
 </div>
 
 
-https://github.com/user-attachments/assets/7ab17f4a-872e-4fac-bcff-228cf07910a5
-
-WhatsAI is a client inspired by ComfyBox, without complex graph nodes, just very brain friendly UI
-
-WhatsAI's vision is to help everyone enjoy the pleasure of AI generated contents, if that's your interest too, feel free
-to join me, let's do something really easy to use!
+## Key Features
+- Modern UI based on React/Mantine: sexy, simple and powerful 👠🪶💪 
+- One-click installation, no complex scripts needed 🚀🚀🚀
+- Excellent extensibility, easily turn any Comfy Workflow into a WhatsAI Card 🪄🧙‍♂️✨
 
 # Features
 * WebUI/ComfyUI dir auto management, just tell WhatsAI where you put them, the models will be added;
