@@ -1,9 +1,17 @@
-The chief meow officer of coding :), thanks for your company.
+<div align="center">
 
-<img src="https://github.com/user-attachments/assets/f1d34536-33e4-4970-83db-6ac8ededd230" alt="Image description" width="300" height="300" >
+![logo](https://github.com/user-attachments/assets/0b23e781-d06f-4000-9b63-a5ff429d09a1)
 
-# whatsai-client
-A very easy to use AIGC UI client fully base on ComfyUI.
+# WhatsAI - AIGC Client For Everyone
+
+[license]: https://img.shields.io/github/license/benchiong/whatsai-client
+[release-version]: https://img.shields.io/github/v/tag/benchiong/whatsai-client
+
+[![][license]](https://github.com/benchiong/whatsai-client/blob/main/LICENSE)
+[![][release-version]](https://github.com/benchiong/whatsai-client/releases/latest)
+
+</div>
+
 
 https://github.com/user-attachments/assets/7ab17f4a-872e-4fac-bcff-228cf07910a5
 
