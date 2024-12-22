@@ -5,7 +5,7 @@ from pathlib import Path
 from logger import logger
 from fastapi import APIRouter
 
-from common import is_win, is_linux, is_macos, tmp_dir, base_dir, venv_path, update_backend_install_progress_info
+from common import is_win, is_linux, is_macos, tmp_dir, venv_path, update_backend_install_progress_info
 from router_gpu import is_apple_m_series_chip, gpu_info
 from utils import download_file, is_folder_exists_and_not_empty
 
@@ -14,10 +14,13 @@ router = APIRouter()
 python_version = '3.12.7'
 def python_installed():
     try:
-        result = subprocess.check_output(["python3", "--version"])
+        python_cmd = find_system_python_executable()
+        if not python_cmd:
+            return False
+        result = subprocess.check_output([python_cmd, "--version"])
         installed_version = result.decode().strip().split()[-1]
         major, minor, _ = installed_version.split(".")
-        return major == "3" and minor == "12"
+        return str(major) == "3" and str(minor) == "12"
     except FileNotFoundError:
         return False
 
