@@ -2,7 +2,7 @@
 
 ![logo](https://github.com/user-attachments/assets/0b23e781-d06f-4000-9b63-a5ff429d09a1)
 
-# WhatsAI - AI-Generated Content Client for Everyone
+# WhatsAI - AIGC Client for Everyone
 
 [license]: https://img.shields.io/github/license/benchiong/whatsai-client
 [release-version]: https://img.shields.io/github/v/tag/benchiong/whatsai-client
