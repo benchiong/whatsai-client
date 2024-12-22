@@ -12,13 +12,12 @@
 
 </div>
 
-
-## Key Features
+### Key Features
 - Modern UI based on React/Mantine: sexy, simple and powerful 👠🪶💪 
 - One-click installation, no complex scripts needed 🚀🚀🚀
 - Excellent extensibility, easily turn any Comfy Workflow into a WhatsAI Card 🪄🧙‍♂️✨
 
-# Features
+### Swear Features
 * WebUI/ComfyUI dir auto management, just tell WhatsAI where you put them, the models will be added;
 * CivitAI model downloader, with file hash, WhatsAI will download the info for you, make models very beautiful 
 * No workflow things, one workflow can be translated to a card in  WhatsAI, it's very cool both for common user
@@ -34,6 +33,10 @@
 * One more thing, WhatsAI is a client can be setup with one click, no terminal things at all, I almost forget it 
   because I always think it's a feature everyone will agree, LoL!
   [MacOS first version is ready, see realeas for detail]
+
+
+![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
+
 
 # Early version here
 Lots of working is still undone, bugs a lot. Don't worry, I will fix them asap. Fighting!
