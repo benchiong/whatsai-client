@@ -32,9 +32,17 @@
 ![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
 
 
+### Cards Now
+| Cards               |  Provided by |
+| ---------------------- |  ----------- |
+| Stable Diffusion Image-to-Image|  Built-in    |
+| Stable-Diffusion-Text-to-Image | Built-in    |
+| Stable Diffusion Inpainting    | Built-in    |
+| Stable Diffusion Outpainting   | Built-in    |
+| SDXL With Refiner              | Built-in    |
+| SD3(without clip loader)       | Built-in|
 
-
-
+and more are coming... 
 
 ## Credits
 - ComfyUI - https://github.com/comfyanonymous/ComfyUI
