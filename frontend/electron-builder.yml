@@ -14,10 +14,6 @@ extraResources:
     to: assets
     filter:
       - "**/*"
-extraMetadata:
-  environment:
-    PATH: |
-      ${PATH}:/usr/local/bin:/opt/homebrew/bin/:/usr/bin:/bin:/Library/Frameworks/Python.framework/Versions/3.12/bin;C:\\Python312;C:\\Windows\\System32
 
 publish: null
 
