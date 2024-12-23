@@ -1,14 +1,12 @@
 import asyncio
-import multiprocessing
 import threading
-from multiprocessing import Process
 
 import uvicorn
 from data_type.init import initialize_dbs
 from misc.logger import Logger
 from misc.arg_parser import is_prod, host, port
 from model_download_worker import ModelDownloadWorker
-from prompt_worker import PromptWorker, TaskQueue
+from prompt_worker import PromptWorker
 from misc.whatsai_dirs import init_file_paths
 
 
