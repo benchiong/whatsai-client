@@ -14,17 +14,21 @@
 
 Simply put: You can translate any ComfyUI workflow into a WhatsAI Card (a UI built with React and Mantine).
 
-### Cards Now
-| Cards               |  Provided by |
+### WhatsUI Card and ComfyUI Workflow
+| WhatsAI Card              |  ComfyUI Workflow |
 | ---------------------- |  ----------- |
-| Stable Diffusion Image-to-Image|  Built-in    |
-| Stable-Diffusion-Text-to-Image | Built-in    |
-| Stable Diffusion Inpainting    | Built-in    |
-| Stable Diffusion Outpainting   | Built-in    |
-| SDXL With Refiner              | Built-in    |
-| SD3(without clip loader)       | Built-in|
+| Stable Diffusion Image-to-Image|  [ComfyUI Img2Img](https://comfyanonymous.github.io/ComfyUI_examples/img2img/)     |
+| Stable-Diffusion-Text-to-Image | [ComfyUI Lora](https://comfyanonymous.github.io/ComfyUI_examples/lora/)  |
+| Stable Diffusion Inpaint   | [ComfyUI Inpaint](https://comfyanonymous.github.io/ComfyUI_examples/inpaint/)   |
+| Stable Diffusion Outpaint  | [ComfyUI Outpaint](https://comfyanonymous.github.io/ComfyUI_examples/inpaint/#outpainting)    |
+| SDXL With Refiner              | [ComfyUI SDXL](https://comfyanonymous.github.io/ComfyUI_examples/sdxl/)    |
+| SD3                            | [ComfyUI SD3](https://comfyanonymous.github.io/ComfyUI_examples/sd3/) |
+| Flux Dev                       | [ComfyUI Flux Dev](https://comfyanonymous.github.io/ComfyUI_examples/flux/#flux-dev)     |
+| Flux Schnell                   | [ComfyUI Flux Schnell](https://comfyanonymous.github.io/ComfyUI_examples/flux/#flux-schnell)  |
+| Flux Inpaint    | [ComfyUI Flux Inpaint](https://comfyanonymous.github.io/ComfyUI_examples/flux/#fill-inpainting-model)   |
+| Flux Outpaint   | [ComfyUI Flux Outpaint](https://comfyanonymous.github.io/ComfyUI_examples/flux/#fill-inpainting-model)    |
 
-and more are coming... 
+more are coming... 
 
 ![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
 
