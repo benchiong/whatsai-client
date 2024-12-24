@@ -1,11 +1,10 @@
-from core.abstracts.addon import AddonOutputToReplace
 from core.abstracts.card import Card
-from core.addons import Addon_SD3Clip
 from core.comps import (
     Comp_CheckpointLoader,
     Comp_CLIPTextEncode,
     Comp_KSampler,
-    Comp_EmptyLatentImage, Comp_SD3ClipLoader, Comp_FluxGuidance,
+    Comp_EmptyLatentImage,
+    Comp_FluxGuidance,
 )
 from core.funcs import Func_VAEDecode, Func_SaveImage
 
@@ -20,7 +19,7 @@ class FluxDevCard(Card):
         "pre_models": [
             {
                 # https://civitai.com/models/1032613/flux1-dev-scaled-fp8
-                'hash': '358FFF9355C962532593898B10436F13E6F9BFB0389F36DF03C6E55FE7C9CBFE'
+                # 'hash': '358FFF9355C962532593898B10436F13E6F9BFB0389F36DF03C6E55FE7C9CBFE'
             }
         ],
 
@@ -32,8 +31,7 @@ class FluxDevCard(Card):
 
         load_checkpoint = Comp_CheckpointLoader(
             name='checkpoint',
-            default_model='flux_dev.safetensors',
-            # default_model='flux1DevScaledFp8_v2.safetensors',
+            default_model='flux1-dev-fp8.safetensors',
         )
         model, clip, vae = self.register_func(load_checkpoint)
 
@@ -54,7 +52,7 @@ class FluxDevCard(Card):
         negative_prompt.set_visible(False)
         negative_cond = self.register_func(negative_prompt)
 
-        guidance = Comp_FluxGuidance('guidance')
+        guidance = Comp_FluxGuidance(name='guidance')
         self.link(positive_cond, guidance.inputs.conditioning)
         guidance_cond = self.register_func(guidance)
 
@@ -67,7 +65,8 @@ class FluxDevCard(Card):
             cfg_scale=1.0,
             sampler_name='euler',
             scheduler_name='simple',
-            denoise=1.0
+            denoise=1.0,
+            preview_steps=1
         )
         k_sampler.set_widgets_visibility(['cfg', 'denoise'], False)
         self.link(model, k_sampler.inputs.model)

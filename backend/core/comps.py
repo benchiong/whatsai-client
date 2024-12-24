@@ -20,7 +20,8 @@ from core.funcs import (
     Func_KSamplerAdvanced,
     Func_ClipLoader,
     Func_DualCLIPLoader,
-    Func_TripleCLIPLoader, Func_FluxGuidance
+    Func_TripleCLIPLoader, Func_FluxGuidance, Func_UNETLoader, Func_BasicScheduler, Func_KSamplerSelect,
+    Func_RandomNoise, Func_InpaintModelConditioning
 )
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget
 
@@ -47,6 +48,7 @@ class Comp_VAELoader(Comp):
     def __init__(self,
                  name="Vae Loader",
                  display_name='Vae',
+                 default_vae_id=None
                  ):
         super().__init__(name=name, display_name=display_name)
 
@@ -58,7 +60,7 @@ class Comp_VAELoader(Comp):
             param_name='vae_id',
             values_function_name='list_vaes',
             values_function_params=None,
-            default_value=None
+            default_value=default_vae_id
         )
         widget_model_loader.set_optional(True)
         self.register_widget(widget_model_loader)
@@ -123,11 +125,12 @@ class Comp_KSampler(Comp):
                  denoise=1.0,
                  sampler_name='euler',
                  scheduler_name='normal',
-                 grouped_widgets=True
+                 grouped_widgets=True,
+                 preview_steps=3
                  ):
         super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
 
-        k_sampler = Func_KSampler()
+        k_sampler = Func_KSampler(preview_steps=preview_steps)
         self.register_func(k_sampler)
 
         widget_seed = SeedWidget(
@@ -199,10 +202,11 @@ class Comp_KSamplerAdvanced(Comp):
                  start_at_step=0,
                  end_at_step=10000,
                  return_with_leftover_noise='disable',
+                 preview_steps=3,
                  ):
         super().__init__(name=name, display_name=display_name, grouped_widgets=True)
 
-        k_sampler_advanced = Func_KSamplerAdvanced()
+        k_sampler_advanced = Func_KSamplerAdvanced(preview_steps=preview_steps)
         self.register_func(k_sampler_advanced)
 
         widget_add_noise = ComboWidget(
@@ -448,9 +452,25 @@ class Comp_UpscaleLatent(Comp):
         self.func_upscale = Func_LatentScale()
 
 
+class Comp_LoadImage(Comp):
+    def __init__(self, name='LoadImage', display_name='Load Image'):
+        super().__init__(name=name, display_name=display_name)
+
+        func_load_image = Func_LoadImage()
+        self.register_func(func_load_image)
+
+        widget_load_image = ImageWidget(
+            param_name='image_path',
+            display_name=display_name,
+            default_value=None,
+            value_type=str
+        )
+        self.register_widget(widget_load_image)
+
+
 class Comp_Image2Latent(Comp):
     def __init__(self,
-                 name="Image to Latent",
+                 name='Image to Latent',
                  display_name='Load Image For Image to Image',
                  ):
         super().__init__(name=name, display_name=display_name)
@@ -523,7 +543,73 @@ class Comp_LoadImageAndMaskForInpainting(Comp):
         self.share_outputs(func_vae_encode)
 
 
-class Comp_LoadImageAndPadForOutpainting(Comp):
+class Comp_ImagePadForOutpaint(Comp):
+    def __init__(self,
+                 name="ImagePadForOutpaint",
+                 display_name='Image Pad For Outpaint',
+                 left=0,
+                 top=128,
+                 right=0,
+                 bottom=128,
+                 feathering=40
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=True)
+
+        func_pad_image = Func_ImagePadForOutpaint()
+        self.register_func(func_pad_image)
+
+        widget_pad_left = IntWidget(
+            display_name='Left Padding',
+            param_name='left',
+            default_value=left,
+            min=0,
+            max=10240,
+            step=32
+        )
+        self.register_widget(widget_pad_left)
+
+        widget_pad_top = IntWidget(
+            display_name='Top Padding',
+            param_name='top',
+            default_value=top,
+            min=0,
+            max=10240,
+            step=32
+        )
+        self.register_widget(widget_pad_top)
+
+        widget_pad_right = IntWidget(
+            display_name='Right Padding',
+            param_name='right',
+            default_value=right,
+            min=0,
+            max=10240,
+            step=32
+        )
+        self.register_widget(widget_pad_right)
+
+        widget_pad_bottom = IntWidget(
+            display_name='Bottom Padding',
+            param_name='bottom',
+            default_value=bottom,
+            min=0,
+            max=10240,
+            step=32
+        )
+        self.register_widget(widget_pad_bottom)
+
+        widget_feathering = IntWidget(
+            display_name='Feathering',
+            param_name='feathering',
+            default_value=feathering,
+            min=0,
+            max=10240,
+            step=1
+        )
+        self.register_widget(widget_feathering)
+
+
+class Comp_LoadImageAndPadForOutpaint(Comp):
     def __init__(self,
                  name="Load Image And Pad For Outpainting",
                  display_name='Load Image to outpaint',
@@ -801,7 +887,7 @@ class Comp_SD3ClipLoader(SwitchableComp):
 
 
 class Comp_FluxGuidance(Comp):
-    def __init__(self, name='FluxGuidance', display_name='Flux Guidance', default_value=3.5):
+    def __init__(self, name='FluxGuidance', display_name='Flux Guidance', guidance=3.5):
         super().__init__(name=name, display_name=display_name)
 
         flux_guidance = Func_FluxGuidance()
@@ -810,10 +896,119 @@ class Comp_FluxGuidance(Comp):
         widget_guidance = FloatWidget(
             display_name='Flux Guidance',
             param_name='guidance',
-            default_value=default_value,
+            default_value=guidance,
             min=0.0,
             max=100.0,
             step=0.1,
             round=2
         )
         self.register_widget(widget_guidance)
+
+
+class Comp_UNETLoader(Comp):
+    def __init__(self, name='UnetLoader', display_name='Unet Loader', default_unet_id=None,
+                 default_weight_type='default'):
+        super().__init__(name=name, display_name=display_name)
+        unet_loader = Func_UNETLoader()
+        self.register_func(unet_loader)
+
+        widget_unet_loader = ModelComboWidget(
+            display_name=display_name,
+            param_name='unet_id',
+            values_function_name='list_checkpoints',
+            default_value=default_unet_id
+        )
+        self.register_widget(widget_unet_loader)
+
+        widget_weight_dtype = ComboWidget(
+            display_name='Widget Type',
+            param_name='weight_dtype',
+            values=["default", "fp8_e4m3fn", "fp8_e4m3fn_fast", "fp8_e5m2"],
+            default_value=default_weight_type
+        )
+        self.register_widget(widget_weight_dtype)
+
+
+class Comp_BasicScheduler(Comp):
+    def __init__(self, name='BasicScheduler', display_name='Basic Scheduler', scheduler_name='simple', steps=20,
+                 denoise=1.0):
+        super().__init__(name=name, display_name=display_name)
+
+        basic_scheduler = Func_BasicScheduler()
+        self.register_func(basic_scheduler)
+
+        widget_scheduler_name = ComboWidget(
+            display_name='Scheduler',
+            param_name='scheduler',
+            default_value=scheduler_name,
+            values=comfy.samplers.SCHEDULER_NAMES
+        )
+        self.register_widget(widget_scheduler_name)
+
+        widget_steps = IntWidget(
+            display_name='Steps',
+            param_name='steps',
+            default_value=steps,
+            min=1,
+            max=1000,
+            step=1
+        )
+        self.register_widget(widget_steps)
+
+        widget_denoise = FloatWidget(
+            display_name='Denoise',
+            param_name='denoise',
+            default_value=denoise,
+            min=0.0,
+            max=1.0,
+            step=0.05,
+            round=2
+        )
+        self.register_widget(widget_denoise)
+
+
+class Comp_KSamplerSelect(Comp):
+    def __init__(self, name='KSamplerSelect', display_name='KSampler Select', sampler_name='euler'):
+        super().__init__(name=name, display_name=display_name)
+
+        ksampler_select = Func_KSamplerSelect()
+        self.register_func(ksampler_select)
+
+        widget_sampler_name = ComboWidget(
+            display_name='Sampler',
+            param_name='sampler_name',
+            default_value=sampler_name,
+            values=comfy.samplers.SAMPLER_NAMES
+        )
+        self.register_widget(widget_sampler_name)
+
+
+class Comp_RandomNoise(Comp):
+    def __init__(self, name='RandomNoise', display_name='Random Noise', noise_seed=None):
+        super().__init__(name=name, display_name=display_name)
+
+        random_noise = Func_RandomNoise()
+        self.register_func(random_noise)
+
+        widget_noise_seed = SeedWidget(
+            display_name='Seed',
+            param_name='noise_seed',
+            default_value=noise_seed
+        )
+        self.register_widget(widget_noise_seed)
+
+
+class Comp_InpaintModelConditioning(Comp):
+    def __init__(self, name='InpaintModelConditioning', display_name='Inpaint Model Conditioning', noise_mask=False):
+        super().__init__(name=name, display_name=display_name)
+
+        inpaint_model_conditioning = Func_InpaintModelConditioning()
+        self.register_func(inpaint_model_conditioning)
+
+        # todo: create bool widget and frontend should follow, then use it.
+        # widget_noise_mask = BoolWidget(
+        #     display_name='Noise Mask',
+        #     param_name='noise_mask',
+        #     default_value=noise_mask
+        # )
+        # self.register_widget(widget_noise_mask)

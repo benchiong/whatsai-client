@@ -9,7 +9,7 @@ from .addon import Addon
 from .comp import Comp
 from .func import Func, FuncOutput, FuncInput, Link, ParamPos
 from ..addons import ADD_ON_CLASS_MAP
-from ..funcs import Func_KSampler, Func_KSamplerAdvanced
+from ..funcs import Func_KSampler, Func_KSamplerAdvanced, Func_SamplerCustomAdvanced
 
 
 class CardMetaData(BaseModel):
@@ -469,7 +469,10 @@ class Card(ABC):
 
         k_samplers = []
         for func in self.flatten_funcs():
-            if isinstance(func, Func_KSampler) or isinstance(func, Func_KSamplerAdvanced):
+            if (isinstance(func, Func_KSampler)
+                    or isinstance(func, Func_KSamplerAdvanced)
+                    or isinstance(func, Func_SamplerCustomAdvanced)
+            ):
                 k_samplers.append(func)
         return k_samplers
 

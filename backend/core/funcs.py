@@ -1081,3 +1081,262 @@ class Func_FluxGuidance(Func):
     def run(self, conditioning, guidance):
         c = conditioning_set_values(conditioning, {"guidance": guidance})
         return (c,)
+
+
+class Func_SamplerCustomAdvanced(Func):
+    def __init__(self, name="SamplerCustomAdvanced", preview_method=LatentPreviewMethod.Auto,
+                 preview_steps=3):
+        super().__init__(name)
+
+        self.preview_method = preview_method
+        self.previewer = None
+        self.preview_steps = preview_steps
+        self.callback = None
+        self.x0_output_dict = {}
+
+        self.set_inputs(
+            IOInfo(name='noise', data_type='NOISE'),
+            IOInfo(name='guider', data_type='GUIDER'),
+            IOInfo(name='sampler', data_type='SAMPLER'),
+            IOInfo(name='sigmas', data_type='SIGMAS'),
+            IOInfo(name='latent_image', data_type='LATENT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='output', data_type='LATENT'),
+            IOInfo(name='denoised_output', data_type='LATENT'),
+        )
+
+    def set_callback(self, cb):
+        self.callback = cb
+
+    def get_callback(self):
+        if not self.callback:
+            return None
+
+        def _callback(step, x0, x, total_steps):
+            """ Return step, total_steps, and preview_bytes. """
+
+            self.x0_output_dict["x0"] = x0
+
+            step += 1
+            if step == 1 or step == total_steps or step % self.preview_steps == 0:
+                preview_bytes = self.previewer.decode_latent_to_preview_base64(x0)
+                self.callback(step, total_steps, preview_bytes)
+
+        return _callback
+
+    def run(self, noise, guider, sampler, sigmas, latent_image):
+        if not self.previewer:
+            self.previewer = get_previewer(
+                self.preview_method,
+                guider.model_patcher.load_device,
+                guider.model_patcher.model.latent_format
+            )
+
+        latent = latent_image
+        latent_image = latent["samples"]
+        latent = latent.copy()
+        latent_image = comfy.sample.fix_empty_latent_channels(guider.model_patcher, latent_image)
+        latent["samples"] = latent_image
+
+        noise_mask = None
+        if "noise_mask" in latent:
+            noise_mask = latent["noise_mask"]
+
+        disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
+        samples = guider.sample(noise.generate_noise(latent), latent_image, sampler, sigmas, denoise_mask=noise_mask,
+                                callback=self.get_callback(), disable_pbar=disable_pbar, seed=noise.seed)
+        samples = samples.to(comfy.model_management.intermediate_device())
+
+        out = latent.copy()
+        out["samples"] = samples
+        if "x0" in self.x0_output_dict:
+            out_denoised = latent.copy()
+            out_denoised["samples"] = guider.model_patcher.model.process_latent_out(self.x0_output_dict["x0"].cpu())
+        else:
+            out_denoised = out
+        return (out, out_denoised)
+
+
+class Func_BasicScheduler(Func):
+    def __init__(self, name="BasicScheduler"):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='scheduler', data_type='STRING'),
+            IOInfo(name='steps', data_type='INT'),
+            IOInfo(name='denoise', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='sigmas', data_type='SIGMAS'),
+        )
+
+    def run(self, model, scheduler, steps, denoise):
+        total_steps = steps
+        if denoise < 1.0:
+            if denoise <= 0.0:
+                return (torch.FloatTensor([]),)
+            total_steps = int(steps / denoise)
+
+        sigmas = comfy.samplers.calculate_sigmas(model.get_model_object("model_sampling"), scheduler, total_steps).cpu()
+        sigmas = sigmas[-(steps + 1):]
+        return (sigmas,)
+
+
+class Func_KSamplerSelect(Func):
+    def __init__(self, name="KSamplerSelect"):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='sampler_name', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='sampler', data_type='SAMPLER'),
+        )
+
+    def run(self, sampler_name):
+        sampler = comfy.samplers.sampler_object(sampler_name)
+        return (sampler,)
+
+
+class Noise_RandomNoise:
+    def __init__(self, seed):
+        self.seed = seed
+
+    def generate_noise(self, input_latent):
+        latent_image = input_latent["samples"]
+        batch_inds = input_latent["batch_index"] if "batch_index" in input_latent else None
+        return comfy.sample.prepare_noise(latent_image, self.seed, batch_inds)
+
+
+class Func_RandomNoise(Func):
+    def __init__(self, name="RandomNoise"):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='noise_seed', data_type='INT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='noise', data_type='NOISE'),
+        )
+
+    def run(self, noise_seed):
+        return (Noise_RandomNoise(noise_seed),)
+
+
+class Guider_Basic(comfy.samplers.CFGGuider):
+    def set_conds(self, positive):
+        self.inner_set_conds({"positive": positive})
+
+
+class Func_BasicGuider(Func):
+    def __init__(self, name="BasicGuider"):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='conditioning', data_type='CONDITIONING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='guider', data_type='GUIDER'),
+        )
+
+    def run(self, model, conditioning):
+        guider = Guider_Basic(model)
+        guider.set_conds(conditioning)
+        return (guider,)
+
+
+class Func_InpaintModelConditioning(Func):
+    def __init__(self, name="InpaintModelConditioning"):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='vae', data_type='VAE'),
+            IOInfo(name='pixels', data_type='IMAGE'),
+            IOInfo(name='mask', data_type='MASK'),
+            # IOInfo(name='noise_mask', data_type='BOOLEAN'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, positive, negative, pixels, vae, mask, noise_mask=False):
+        x = (pixels.shape[1] // 8) * 8
+        y = (pixels.shape[2] // 8) * 8
+        mask = torch.nn.functional.interpolate(mask.reshape((-1, 1, mask.shape[-2], mask.shape[-1])),
+                                               size=(pixels.shape[1], pixels.shape[2]), mode="bilinear")
+
+        orig_pixels = pixels
+        pixels = orig_pixels.clone()
+        if pixels.shape[1] != x or pixels.shape[2] != y:
+            x_offset = (pixels.shape[1] % 8) // 2
+            y_offset = (pixels.shape[2] % 8) // 2
+            pixels = pixels[:, x_offset:x + x_offset, y_offset:y + y_offset, :]
+            mask = mask[:, :, x_offset:x + x_offset, y_offset:y + y_offset]
+
+        m = (1.0 - mask.round()).squeeze(1)
+        for i in range(3):
+            pixels[:, :, :, i] -= 0.5
+            pixels[:, :, :, i] *= m
+            pixels[:, :, :, i] += 0.5
+        concat_latent = vae.encode(pixels)
+        orig_latent = vae.encode(orig_pixels)
+
+        out_latent = {}
+
+        out_latent["samples"] = orig_latent
+        if noise_mask:
+            out_latent["noise_mask"] = mask
+
+        out = []
+        for conditioning in [positive, negative]:
+            c = conditioning_set_values(conditioning, {"concat_latent_image": concat_latent,
+                                                       "concat_mask": mask})
+            out.append(c)
+        return (out[0], out[1], out_latent)
+
+
+class Func_DifferentialDiffusion(Func):
+    def __init__(self, name="DifferentialDiffusion"):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='model', data_type='MODEL'),
+        )
+
+    def run(self, model):
+        model = model.clone()
+        model.set_model_denoise_mask_function(self.forward)
+        return (model,)
+
+    def forward(self, sigma: torch.Tensor, denoise_mask: torch.Tensor, extra_options: dict):
+        model = extra_options["model"]
+        step_sigmas = extra_options["sigmas"]
+        sigma_to = model.inner_model.model_sampling.sigma_min
+        if step_sigmas[-1] > sigma_to:
+            sigma_to = step_sigmas[-1]
+        sigma_from = step_sigmas[0]
+
+        ts_from = model.inner_model.model_sampling.timestep(sigma_from)
+        ts_to = model.inner_model.model_sampling.timestep(sigma_to)
+        current_ts = model.inner_model.model_sampling.timestep(sigma[0])
+
+        threshold = (current_ts - ts_to) / (ts_from - ts_to)
+
+        return (denoise_mask >= threshold).to(denoise_mask.dtype)

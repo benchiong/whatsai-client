@@ -13,7 +13,7 @@ class SDXLCard(Card):
 
     meta_data = {
         'name': name,
-        'display_name': "SDXL With Refiner",
+        'display_name': "SDXL + Refiner",
         'describe': "SDXL With Refiner",
 
         "pre_models": [
