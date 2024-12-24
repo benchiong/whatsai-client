@@ -12,9 +12,10 @@ export function CardDigest({ simpleCard }: { simpleCard: SimpleCardInfoType }) {
     <Stack
       bg={theme.colors.waLight[3]}
       m={0}
-      gap={20}
-      h={360}
-      w={210}
+      gap={0}
+      p0
+      h={250}
+      w={160}
       align={"center"}
       style={{
         borderRadius: "20px",
@@ -27,36 +28,41 @@ export function CardDigest({ simpleCard }: { simpleCard: SimpleCardInfoType }) {
     >
       {simpleCard.cover_image &&
         (simpleCard.cover_image.startsWith("http") ? (
-          <Center w={210} h={280}>
+          <Center w={160} h={200}>
             <Image
               src={simpleCard.cover_image}
-              width={210}
-              height={280}
-              objectFit={"contain"}
+              width={160}
+              height={200}
               alt={"image"}
+              style={{
+                objectFit: "cover",
+                borderRadius: "5px",
+              }}
             />
           </Center>
         ) : (
           <ImageLocal
             localPath={simpleCard.cover_image}
-            width={210}
-            height={280}
-            objectFit={"contain"}
+            width={160}
+            height={200}
           />
         ))}
-      <Text
-        w={"100%"}
-        lineClamp={2}
-        px={10}
-        style={{
-          textAlign: "center",
-          fontWeight: 400,
-          fontSize: "16px",
-          wordBreak: "break-word",
-        }}
-      >
-        {simpleCard.card_name}
-      </Text>
+      <Center h={40}>
+        <Text
+          w={"100%"}
+          lineClamp={2}
+          mt={5}
+          px={5}
+          style={{
+            textAlign: "center",
+            fontWeight: 500,
+            fontSize: "14px",
+            wordBreak: "break-word",
+          }}
+        >
+          {simpleCard.display_name}
+        </Text>
+      </Center>
     </Stack>
   );
 }
