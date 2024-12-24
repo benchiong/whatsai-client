@@ -1,2 +1,0 @@
-!function(e,o){if("object"==typeof exports&&"object"==typeof module)module.exports=o();else if("function"==typeof define&&define.amd)define([],o);else{var r=o();for(var n in r)("object"==typeof exports?exports:e)[n]=r[n]}}(global,(()=>(()=>{"use strict";const e=require("electron"),o={send(o,r){e.ipcRenderer.send(o,r)},on(o,r){const n=(e,...o)=>r(...o);return e.ipcRenderer.on(o,n),()=>{e.ipcRenderer.removeListener(o,n)}}};return e.contextBridge.exposeInMainWorld("ipc",o),{}})()));
-//# sourceMappingURL=preload.js.map
