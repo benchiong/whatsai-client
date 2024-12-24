@@ -36,18 +36,21 @@ async def model_infos_by_type(
 
 
 class SyncModelInfosReq(PydanticModel):
-    model_type: Optional[str] = None
+    model_type: str = None
 
 
 @router.post('/sync_model_infos')
 async def sync_model_infos(req: SyncModelInfosReq):
-    """ Sync model infos by type, if no model_type, all model infos will sync.
-        We need it when user first setup or he/she put file in some dir manually.
+    """ Sync model infos by type, if no model_type
+    We need it when user first setup or he/she put file in some dir manually.
     """
     model_type = req.model_type.lower()
+
+    model_dirs = ModelDir.get_dirs(model_type)
+    for model_dir in model_dirs:
+        refresh_model_infos_in_dir(model_type, model_dir)
+
     model_infos = ModelInfo.get_model_infos(model_type)
-    for model_info in model_infos:
-        submit_model_info_sync_task(model_info)
     return model_infos
 
 
@@ -206,6 +209,17 @@ def add_model_infos_in_dir(model_type, model_dir):
     model_files_in_dir = get_model_files_in_dir(model_dir)
     ModelInfo.add_with_many_local_paths(model_files_in_dir, model_type)
     model_infos_to_sync = ModelInfo.get_with_local_paths(model_files_in_dir)
+    for model_info in model_infos_to_sync:
+        submit_model_info_sync_task(model_info)
+
+
+def refresh_model_infos_in_dir(model_type, model_dir):
+    model_files_in_dir = get_model_files_in_dir(model_dir)
+    model_files_not_in_db = ModelInfo.filter_local_paths_not_in_db(model_files_in_dir)
+
+    ModelInfo.add_with_many_local_paths(model_files_not_in_db, model_type)
+    model_infos_to_sync = ModelInfo.get_with_local_paths(model_files_not_in_db)
+
     for model_info in model_infos_to_sync:
         submit_model_info_sync_task(model_info)
 

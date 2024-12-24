@@ -217,7 +217,7 @@ def submit_model_info_sync_task(model_info: ModelInfo):
     if not model_info:
         return
 
-    workload = json.dumps(model_info.dict())
+    workload = json.dumps(model_info.model_dump())
     task_in_db = ModelDownloadTask.get(workload)
     if task_in_db and task_in_db.task_status == TaskStatus.queued.value:
         return

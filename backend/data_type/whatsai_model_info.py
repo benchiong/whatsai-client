@@ -216,6 +216,15 @@ class ModelInfo(PyDBModel):
         return model_infos
 
     @classmethod
+    def filter_local_paths_not_in_db(cls, local_paths):
+        all_file_paths = [model_info.local_path for model_info in cls.get_all()]
+        not_in_paths = []
+        for local_path in local_paths:
+            if local_path not in all_file_paths:
+                not_in_paths.append(local_path)
+        return not_in_paths
+
+    @classmethod
     def get_taesd_model_infos(cls):
         conn = cls.conn()
         with closing(conn.cursor()) as cur:

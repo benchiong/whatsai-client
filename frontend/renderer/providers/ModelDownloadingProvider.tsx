@@ -71,9 +71,7 @@ export function ModelDownloadingContextProvider({
     }
 
     cancelDownloadTask(workloadId)
-      .then((r) => {
-        console.log(r);
-      })
+      .then((r) => {})
       .catch((e) => {
         console.error(e);
       });
