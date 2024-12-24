@@ -53,7 +53,8 @@ async def is_backend_ready():
             'port': None
         }
 
-    backend_url = f'http://127.0.0.1:{_backend_port}/docs#/'
+    backend_url = f'http://127.0.0.1:{_backend_port}/docs'
+    logger.info(f"backend_url: {backend_url}")
     try:
         response = await async_get(backend_url, retry=1)
         if response and response.status_code == 200:
@@ -63,12 +64,14 @@ async def is_backend_ready():
                 'port': _backend_port
             }
         else:
+            logger.info(f"Request backend_url not ready: response.status_code:{response.status_code}")
             return {
                 'backend_running': False,
                 'ready': ready,
                 'port': None
             }
     except Exception as e:
+        logger.info(f"Request backend_url failed error:{str(e)}")
         return {
             'backend_running': False,
             'ready': ready,
@@ -148,6 +151,7 @@ def add_possible_python_paths():
     if is_win:
         windows_paths = [
             "C:\\Python312",
+            "D:\\Python312",
             "C:\\Program Files\\Python312",
             "C:\\Program Files (x86)\\Python312",
         ]

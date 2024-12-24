@@ -1,5 +1,6 @@
 import asyncio
 import subprocess
+
 from logger import logger
 
 
@@ -10,8 +11,10 @@ class AsyncProcessManager:
         self.monitor = False
         self.port = None
 
+
     async def start_process(self):
         logger.info(f"Starting process: {self.command}")
+
         self.process = await asyncio.create_subprocess_exec(
             *self.command,
             stdout=subprocess.PIPE,

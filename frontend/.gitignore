@@ -11,6 +11,8 @@ node_modules
 built/*
 
 assets/backend-manager
+assets/backend-manager.exe
+
 app/
 
 **/.DS_Store

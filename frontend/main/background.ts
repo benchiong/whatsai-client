@@ -8,7 +8,7 @@ import { debug_backend, debug_manager } from "./debug";
 const isProd = process.env.NODE_ENV === "production";
 
 if (isProd) {
-  serve({ directory: "app" });
+  serve({directory: "app"});
 } else {
   app.setPath("userData", `${app.getPath("userData")} (development)`);
 }
@@ -22,9 +22,9 @@ const create_main_window = async () => {
       webSecurity: false, // to load local image files.
     },
   };
-
+  
   const mainWindow = createWindow("main", options);
-
+  
   if (isProd) {
     await mainWindow.loadURL("app://./home");
   } else {
@@ -32,7 +32,7 @@ const create_main_window = async () => {
     await mainWindow.loadURL(`http://localhost:${port}/home`);
     mainWindow.webContents.openDevTools();
   }
-
+  
   return mainWindow;
 };
 
@@ -47,13 +47,15 @@ let backendManager: BackendManager | null = null;
   if (debug_manager || debug_backend) {
     return;
   }
-
+  
+  const backendFileName = process.platform === "win32" ? "backend-manager.exe" : "backend-manager";
+  
   const pythonExePath = app.isPackaged
-    ? path.join(process.resourcesPath, "assets", "backend-manager")
-    : path.join(__dirname, "../assets", "backend-manager");
-
+    ? path.join(process.resourcesPath, "assets", backendFileName)
+    : path.join(__dirname, "../assets", backendFileName);
+  
   console.log(pythonExePath);
-
+  
   backendManager = new BackendManager(pythonExePath);
   await backendManager.startProcess();
 })();
@@ -63,11 +65,11 @@ app.on("before-quit", (event) => {
   if (debug_manager || debug_backend) {
     return;
   }
-
+  
   if (!stopping) {
     stopping = true;
     event.preventDefault();
-
+    
     if (backendManager) {
       try {
         backendManager.stopProcess().then(() => {

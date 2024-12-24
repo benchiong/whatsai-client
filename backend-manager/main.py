@@ -1,6 +1,8 @@
 import argparse
 
 import uvicorn
+
+from common import is_win
 from server import app
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -16,7 +18,11 @@ host = args.host
 
 
 if __name__ == '__main__':
-    if is_prod:
+
+    # if is_win, reload will raise issue with asyncio.create_subprocess_exec
+    # https://stackoverflow.com/questions/70568070/running-an-asyncio-subprocess-in-fastapi-results-in-notimplementederror/70570250#70570250
+
+    if is_prod or is_win:
         uvicorn.run(app, host=host, port=port)
     else:
         uvicorn.run("server:app", host=host, port=port, reload=True)

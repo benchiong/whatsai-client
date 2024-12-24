@@ -77,12 +77,12 @@ async def download_file(url, destination, callback=None):
                                     end="")
                                 callback(None, downloaded_size, None)
 
-                    os.rename(downloading_file, destination)
-                    print("Download complete.")
-                    update_backend_install_progress_info(stage='Python file downloaded, preparing venv...',
-                                                         info='',
-                                                        )
-                    return True
+            os.rename(downloading_file, destination)
+            print("Download complete.")
+            update_backend_install_progress_info(stage='Python file downloaded, preparing venv...',
+                                                 info='',
+                                                )
+            return True
     except Exception as e:
         print(e)
         update_backend_install_progress_info(stage='Fail to download python file, retry may help',
