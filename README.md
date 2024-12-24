@@ -2,7 +2,7 @@
 
 ![logo](https://github.com/user-attachments/assets/0b23e781-d06f-4000-9b63-a5ff429d09a1)
 
-# WhatsAI - AIGC Client for Everyone
+# WhatsAI - An easy-to-use UI fully based on ComfyUI.
 
 [license]: https://img.shields.io/github/license/benchiong/whatsai-client
 [release-version]: https://img.shields.io/github/v/tag/benchiong/whatsai-client
@@ -12,25 +12,7 @@
 
 </div>
 
-
-### Key Features
-
-- Modern UI based on React/Mantine: sexy, simple and powerful 👠🪶💪 
-- One-click installation, no complex scripts needed 🚀🚀🚀
-- Excellent extensibility, easily turn any Comfy Workflow into a WhatsAI Card 🪄🧙‍♂️✨
-
-
-### Lovely Features 🐾🐾 
-
-- WebUI/ComfyUI dir auto management: Simply tell WhatsAI where you placed them, and it will automatically add the models.
-- CivitAI model downloader: With file hash, WhatsAI will fetch the information for you, making models look stunning.
-- Artwork viewer: Effortlessly view your generated results, from a list to detailed view, it’s simple and intuitive.
-- Addons with clear concepts: LoRA/VAE/Contronet/UPScaler/Hypernet. Choose what you need with ease, no need to figure out how they work.
-- Comp-based design: Cards and addons are highly modular. With the Widget design, the backend seamlessly communicates with the frontend on how to render. Cool, right?
-
-
-![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
-
+Simply put: You can translate any ComfyUI workflow into a WhatsAI Card (a UI built with React and Mantine).
 
 ### Cards Now
 | Cards               |  Provided by |
@@ -43,6 +25,9 @@
 | SD3(without clip loader)       | Built-in|
 
 and more are coming... 
+
+![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
+
 
 ## Credits
 - ComfyUI - https://github.com/comfyanonymous/ComfyUI
