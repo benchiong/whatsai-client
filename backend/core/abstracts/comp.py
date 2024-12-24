@@ -38,6 +38,9 @@ class Comp(Func):
             a lots of widgets, a brain friendly thing.
         """
 
+        self.visible = True
+        """ Frontend will not display it if set False. """
+
         self._links: list[Link] = []
         """ Inner links of comp, happened before registered to a card, 
         copy them to Card when registered. 
@@ -101,6 +104,17 @@ class Comp(Func):
     def set_group_widgets(self, grouped_widgets):
         """ Set the widgets of comp grouped, frontend will pack it. """
         self.grouped_widgets = grouped_widgets
+
+    def set_visible(self, visible):
+        self.visible = visible
+        for widget in self._widgets.values():
+            widget.visible = visible
+
+    def set_widgets_visibility(self, widget_names: list[str], visible):
+        for widget_name in widget_names:
+            widget = self._widgets.get(widget_name)
+            if widget:
+                widget.visible = visible
 
     def change_param_name_and_display_name(self, origin_param, param_name, display_name=None):
         """ Sometimes you need to change the param_name, display_name of widgets of comp, use this.

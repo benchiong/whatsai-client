@@ -131,5 +131,6 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
     Widget: Widget,
     params: params,
     widgetInfo: widgetInfo,
+    visible: widgetInfo["visible"],
   };
 }

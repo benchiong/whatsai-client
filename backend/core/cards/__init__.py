@@ -1,3 +1,4 @@
+from core.cards.flux_dev import FluxDevCard
 from core.cards.sd_t2i import SDT2ICard
 from core.cards.sd_i2i import SDI2ICard
 from core.cards.sd_inpainting import SDInpaintingCard
@@ -11,5 +12,6 @@ BUILTIN_CARDS_MAP = {
     SDInpaintingCard.name: SDInpaintingCard,
     SDOutpaintingCard.name: SDOutpaintingCard,
     SDXLCard.name: SDXLCard,
-    SD3Card.name: SD3Card
+    SD3Card.name: SD3Card,
+    FluxDevCard.name: FluxDevCard
 }

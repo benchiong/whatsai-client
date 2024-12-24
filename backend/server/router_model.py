@@ -105,7 +105,12 @@ class DownloadCivitAIModelReq(PydanticModel):
 
 @router.get('/get_downloading_models')
 async def get_downloading_models():
-    return ModelDownloadTask.get_downloading_model_info_in_tasks()
+    return ModelDownloadTask.get_downloading_model_info_tasks()
+
+
+@router.get('/cancel_downloading_task')
+async def cancel_downloading_task(task_id: str):
+    return ModelDownloadTask.cancel_task(task_id=task_id)
 
 
 @router.post('/download_civitai_model')

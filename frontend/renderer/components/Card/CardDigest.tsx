@@ -1,5 +1,7 @@
 import { SimpleCardInfoType } from "../../data-type/card";
-import { Stack, useMantineTheme, Image, Text, Center } from "@mantine/core";
+import { Stack, useMantineTheme, Text, Center } from "@mantine/core";
+import Image from "next/image";
+
 import { ImageLocal } from "../Image/ImageLocal";
 import { useRouter } from "next/router";
 
@@ -26,13 +28,20 @@ export function CardDigest({ simpleCard }: { simpleCard: SimpleCardInfoType }) {
       {simpleCard.cover_image &&
         (simpleCard.cover_image.startsWith("http") ? (
           <Center w={210} h={280}>
-            <Image src={simpleCard.cover_image} w={210} h={280} />
+            <Image
+              src={simpleCard.cover_image}
+              width={210}
+              height={280}
+              objectFit={"contain"}
+              alt={"image"}
+            />
           </Center>
         ) : (
           <ImageLocal
             localPath={simpleCard.cover_image}
             width={210}
             height={280}
+            objectFit={"contain"}
           />
         ))}
       <Text

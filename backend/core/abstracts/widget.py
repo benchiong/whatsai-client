@@ -14,6 +14,7 @@ class Widget(ABC):
         self.value = default_value
         self.value_type = value_type
         self.optional = optional
+        self.visible = True
 
         # todo: make sure we need them, remove if don't.
         self._origin_to_new_param_name_map = {}
@@ -66,6 +67,7 @@ class Widget(ABC):
             'value': self.value,
             'optional': self.optional,
             'widget_type': self.__class__.__name__,
+            'visible': self.visible
         }
 
     def __repr__(self):

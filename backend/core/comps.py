@@ -20,7 +20,7 @@ from core.funcs import (
     Func_KSamplerAdvanced,
     Func_ClipLoader,
     Func_DualCLIPLoader,
-    Func_TripleCLIPLoader
+    Func_TripleCLIPLoader, Func_FluxGuidance
 )
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget
 
@@ -798,3 +798,22 @@ class Comp_SD3ClipLoader(SwitchableComp):
         comp_triple_loader = Comp_TripleCLIPLoader(name='Triple Clip', display_name='Triple Clip')
         self.set_comps([comp_clip_loader, comp_dual_clip_loader, comp_triple_loader])
         self.select_comp('Triple Clip')
+
+
+class Comp_FluxGuidance(Comp):
+    def __init__(self, name='FluxGuidance', display_name='Flux Guidance', default_value=3.5):
+        super().__init__(name=name, display_name=display_name)
+
+        flux_guidance = Func_FluxGuidance()
+        self.register_func(flux_guidance)
+
+        widget_guidance = FloatWidget(
+            display_name='Flux Guidance',
+            param_name='guidance',
+            default_value=default_value,
+            min=0.0,
+            max=100.0,
+            step=0.1,
+            round=2
+        )
+        self.register_widget(widget_guidance)

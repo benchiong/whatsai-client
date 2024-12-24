@@ -6,12 +6,16 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ModelDownloadingInfoArrayType } from "../data-type/model";
-import { getDownloadingInfos } from "../lib/api";
+import {
+  DownloadingModelTaskArrayType,
+  ModelDownloadingInfoArrayType,
+} from "../data-type/model";
+import { cancelDownloadTask, getDownloadingInfos } from "../lib/api";
 import { useInterval } from "@mantine/hooks";
 
 export type ModelDownloadingContextType = {
-  downloadingModels: ModelDownloadingInfoArrayType;
+  downloadingTasks: DownloadingModelTaskArrayType;
+  cancelDownloadingTask: (taskId: string) => void;
   startLoop: () => void;
   stopLoop: () => void;
 };
@@ -32,15 +36,15 @@ export function ModelDownloadingContextProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [downloadingModels, setDownloadingModels] =
-    useState<ModelDownloadingInfoArrayType>([]);
+  const [downloadingTasks, setDownloadingTasks] =
+    useState<DownloadingModelTaskArrayType>([]);
 
   const emptyCountBeforeStop = useRef(5);
 
-  const getDownloadingModels = useCallback(() => {
+  const getDownloadingTasks = useCallback(() => {
     getDownloadingInfos()
       .then((downloadInfos) => {
-        setDownloadingModels(downloadInfos);
+        setDownloadingTasks(downloadInfos);
         if (downloadInfos.length == 0) {
           if (emptyCountBeforeStop.current <= 0) {
             interval.stop();
@@ -55,16 +59,31 @@ export function ModelDownloadingContextProvider({
       .catch((e) => console.error("getDownloadingInfos failed:", e));
   }, []);
 
-  const interval = useInterval(() => getDownloadingModels(), 1000);
+  const interval = useInterval(() => getDownloadingTasks(), 1000);
 
   useEffect(() => {
-    getDownloadingModels();
+    getDownloadingTasks();
+  }, []);
+
+  const cancelDownloadingTask = useCallback((workloadId: string) => {
+    if (!workloadId) {
+      return;
+    }
+
+    cancelDownloadTask(workloadId)
+      .then((r) => {
+        console.log(r);
+      })
+      .catch((e) => {
+        console.error(e);
+      });
   }, []);
 
   return (
     <ModelDownloadingContext.Provider
       value={{
-        downloadingModels,
+        cancelDownloadingTask,
+        downloadingTasks: downloadingTasks,
         startLoop: interval.start,
         stopLoop: interval.stop,
       }}

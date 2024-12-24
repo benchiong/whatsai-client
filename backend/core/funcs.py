@@ -24,7 +24,7 @@ from data_type.whatsai_artwork import Artwork
 from data_type.whatsai_model_dir import ModelDir
 from data_type.whatsai_model_info import ModelInfo
 from core.extras import tae_model_info_list
-from misc.helpers import pillow, get_meta_info
+from misc.helpers import pillow, get_meta_info, conditioning_set_values
 from misc.logger import logger
 
 try:
@@ -1064,3 +1064,20 @@ class Func_UNETLoader(Func):
 
         model = comfy.sd.load_diffusion_model(unet_path, model_options=model_options)
         return (model,)
+
+
+class Func_FluxGuidance(Func):
+    def __init__(self, name='FluxGuidance'):
+        super().__init__(name=name)
+        self.set_inputs(
+            IOInfo(name='conditioning', data_type='CONDITIONING'),
+            IOInfo(name='guidance', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='cond', data_type='CONDITIONING'),
+        )
+
+    def run(self, conditioning, guidance):
+        c = conditioning_set_values(conditioning, {"guidance": guidance})
+        return (c,)

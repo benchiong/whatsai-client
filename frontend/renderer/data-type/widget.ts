@@ -21,6 +21,7 @@ export const WidgetSchema = z.object({
   display_name: z.string(),
   widget_type: WidgetTypeEnumSchema,
   optional: z.boolean().optional(),
+  visible: z.boolean().optional().nullable(),
 });
 
 export type WidgetType = z.infer<typeof WidgetSchema>;
