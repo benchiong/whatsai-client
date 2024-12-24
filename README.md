@@ -30,7 +30,7 @@ Simply put: You can translate any ComfyUI workflow into a WhatsAI Card (a UI bui
 
 more are coming... 
 
-![img pic](https://github.com/user-attachments/assets/bb3ad826-ff9a-4b0a-bf30-e5b82da9a9a6)
+![cover](https://github.com/user-attachments/assets/517e55cf-f640-433f-859e-750dffae1440)
 
 
 ## Credits
