@@ -12,10 +12,10 @@ from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SDT2ICard(Card):
-    name = "Stable-Diffusion-Text-to-Image"
+    name = "SD-Text-to-Image"
     meta_data = {
         'name': name,
-        'display_name': "TEST-Stable Diffusion Text-to-Image",
+        'display_name': "SD Text-to-Image",
         'describe': "Text-to-Image with Stable diffusion.",
         "pre_models": [
             {

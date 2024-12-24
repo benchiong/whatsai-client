@@ -283,6 +283,18 @@ def is_url(may_be_url: str):
 
 
 # from ComfyUI
+def conditioning_set_values(conditioning, values={}):
+    c = []
+    for t in conditioning:
+        n = [t[0], t[1].copy()]
+        for k in values:
+            n[1][k] = values[k]
+        c.append(n)
+
+    return c
+
+
+# from ComfyUI
 def pillow(fn, arg):
     prev_value = None
     try:
@@ -295,6 +307,7 @@ def pillow(fn, arg):
         if prev_value is not None:
             ImageFile.LOAD_TRUNCATED_IMAGES = prev_value
     return x
+
 
 def get_meta_info(file_path):
     # todo, support video/ audio ...
@@ -311,7 +324,6 @@ def get_meta_info(file_path):
         logger.debug(e)
         traceback.print_exc()
         return {}
-
 
 
 def get_now_timestamp_and_str():

@@ -76,6 +76,7 @@ export function mapModelDirSchema2FrontModelDirSchema(modelDir: ModelDirType) {
 }
 
 export const ModelDownloadingInfoSchema = z.object({
+  id: z.number().optional().nullable(),
   url: z.string(),
   model_info: ModelInfoSchema,
   total_size: z.number(),
@@ -95,9 +96,27 @@ export type ModelDownloadingInfoType = z.infer<
 export const ModelDownloadingInfoArraySchema = z.array(
   ModelDownloadingInfoSchema,
 );
-
 export type ModelDownloadingInfoArrayType = z.infer<
   typeof ModelDownloadingInfoArraySchema
 >;
+
+export const DownloadingModelTaskSchema = z.object({
+  id: z.number(),
+  task_type: z.string(),
+  task_status: z.string(),
+  workload: ModelDownloadingInfoSchema,
+});
+
+export type DownloadingModelTaskType = z.infer<
+  typeof DownloadingModelTaskSchema
+>;
+
+export const DownloadingModelTaskArraySchema = z.array(
+  DownloadingModelTaskSchema,
+);
+export type DownloadingModelTaskArrayType = z.infer<
+  typeof DownloadingModelTaskArraySchema
+>;
+
 export const ModelInfoListSchema = z.array(ModelInfoSchema);
 export type ModelInfoListType = z.infer<typeof ModelInfoListSchema>;

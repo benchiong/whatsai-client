@@ -1,7 +1,7 @@
 import { WidgetsType, WidgetUnionsType } from "../../data-type/widget";
 import { Stack } from "@mantine/core";
 import { widgetInfo2Widget } from "./index";
-import React, { useState } from "react";
+import React from "react";
 
 export function WidgetsRender({
   widgets,
@@ -19,9 +19,9 @@ export function WidgetsRender({
   return (
     <Stack align="center" justify="space-between" gap="md" w={width}>
       {widgets.map((w, index) => {
-        const { Widget, params, key } = widgetInfo2Widget(w) ?? {};
+        const { Widget, params, key, visible } = widgetInfo2Widget(w) ?? {};
         params["paramName"] = key;
-        if (!Widget) {
+        if (!Widget || visible == false) {
           return <></>;
         }
         return (

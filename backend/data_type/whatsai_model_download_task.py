@@ -58,6 +58,14 @@ class ModelDownloadTask(PyDBModel):
                 self.id = cur.lastrowid
             conn.commit()
 
+    def cancel(self):
+        unfinished_status = ['queued', 'processing']
+        print(self.task_status)
+        if self.task_status in unfinished_status:
+            self.task_status = TaskStatus.canceled.value
+            self.save()
+            print(self.task_status)
+
     def to_tuple(self, with_id=False):
         model_dict = self.model_dump()
         model_dict['workload'] = json.dumps(model_dict.get('workload', {}))
@@ -67,6 +75,14 @@ class ModelDownloadTask(PyDBModel):
         else:
             model_dict.pop('id')
             return tuple(model_dict.values())
+
+    @classmethod
+    def cancel_task(cls, task_id):
+        task = cls.get(task_id)
+        if task:
+            task.cancel()
+            return True
+        return False
 
     @classmethod
     def from_row(cls, row: tuple):
@@ -82,7 +98,7 @@ class ModelDownloadTask(PyDBModel):
 
         model_info = cls(
             id=row[0],
-            task_type=row[1],
+            task_type=task_type,
             task_status=row[2],
             workload=workload,
         )
@@ -121,7 +137,7 @@ class ModelDownloadTask(PyDBModel):
         return [cls.from_row(row) for row in rows]
 
     @classmethod
-    def get_downloading_model_info_in_tasks(cls):
+    def get_downloading_model_info_tasks(cls):
         unfinished_status = ['queued', 'processing']
         query = """
                     SELECT * FROM model_download_task
@@ -135,4 +151,4 @@ class ModelDownloadTask(PyDBModel):
             cur.execute(query, unfinished_status)
             rows = cur.fetchall()
 
-        return [cls.from_row(row).workload for row in rows]
+        return [cls.from_row(row) for row in rows]

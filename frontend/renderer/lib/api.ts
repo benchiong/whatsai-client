@@ -7,10 +7,13 @@ import {
 } from "../data-type/card";
 import { z } from "zod";
 import {
+  DownloadingModelTaskArraySchema,
+  DownloadingModelTaskArrayType,
+  DownloadingModelTaskSchema,
+  DownloadingModelTaskType,
   FrontModelDirType,
   mapModelDirSchema2FrontModelDirSchema,
   ModelDirSchema,
-  ModelDirType,
   ModelDownloadingInfoArraySchema,
   ModelDownloadingInfoArrayType,
   ModelInfoArraySchema,
@@ -30,7 +33,6 @@ import { AddonSchema, AddonType } from "../data-type/addons";
 import { TaskArraySchema, TaskArrayType } from "../data-type/task";
 import {
   ArtworkArraySchema,
-  ArtworkArrayType,
   ArtworkSchema,
   ArtworkType,
 } from "../data-type/artwork";
@@ -881,13 +883,13 @@ export async function getCivitaiModelVersionInfo(
   }
 }
 
-export async function getDownloadingInfos(): Promise<ModelDownloadingInfoArrayType> {
+export async function getDownloadingInfos(): Promise<DownloadingModelTaskArrayType> {
   try {
     const resp = await fetch(serverUrl + "model/get_downloading_models", {
       method: "GET",
     });
     const res = await resp.json();
-    const r = ModelDownloadingInfoArraySchema.safeParse(res);
+    const r = DownloadingModelTaskArraySchema.safeParse(res);
     if (r.success) {
       return r.data;
     } else {
@@ -896,5 +898,19 @@ export async function getDownloadingInfos(): Promise<ModelDownloadingInfoArrayTy
     }
   } catch (e) {
     return [];
+  }
+}
+
+export async function cancelDownloadTask(taskId: string): Promise<boolean> {
+  try {
+    const resp = await fetch(
+      serverUrl + `model/cancel_downloading_task?task_id=${taskId}`,
+      {
+        method: "GET",
+      },
+    );
+    return await resp.json();
+  } catch (e) {
+    return false;
   }
 }

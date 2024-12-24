@@ -12,11 +12,11 @@ from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
 class SDI2ICard(Card):
-    name = "Stable-Diffusion-Image-to-Image"
+    name = "SD-Image-to-Image"
 
     meta_data = {
         'name': name,
-        'display_name': "Stable Diffusion Image-to-Image",
+        'display_name': "SD Image-to-Image",
         'describe': "Image-to-Image with Stable diffusion.",
 
         "pre_models": [

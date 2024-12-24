@@ -9,19 +9,24 @@ import {
   useMantineTheme,
 } from "@mantine/core";
 import { useModelDownloadingContext } from "../../providers/ModelDownloadingProvider";
-import React, { useCallback } from "react";
-import { ModelDownloadingInfoType } from "../../data-type/model";
+import React, { useCallback, useState } from "react";
+import {
+  DownloadingModelTaskSchema,
+  DownloadingModelTaskType,
+  ModelDownloadingInfoType,
+} from "../../data-type/model";
 import { ImageLocal } from "../Image/ImageLocal";
 
 import { civitSizeStr } from "../../data-type/helpers";
+import { Close } from "../Widgets/Close";
 
 export function ModelDownloading() {
   const theme = useMantineTheme();
   const modelDownloadingContext = useModelDownloadingContext();
 
-  const downloadingInfos = modelDownloadingContext.downloadingModels;
+  const downloadingTasks = modelDownloadingContext.downloadingTasks;
 
-  if (downloadingInfos && downloadingInfos.length > 0) {
+  if (downloadingTasks && downloadingTasks.length > 0) {
     return (
       <Stack m={20} bg={theme.colors.waLight[4]}>
         <Group justify={"space-start"} h={36} bg={theme.colors.waLight[3]}>
@@ -53,12 +58,12 @@ export function ModelDownloading() {
               fontSize: "12px",
               fontWeight: 300,
             }}
-          >{`${downloadingInfos.length ?? 0}`}</Text>
+          >{`${downloadingTasks.length ?? 0}`}</Text>
         </Group>
 
         <Group p={20}>
-          {downloadingInfos.map((info) => {
-            return <ModelDownloadingItem info={info} key={info.url} />;
+          {downloadingTasks.map((task) => {
+            return <ModelDownloadingItem task={task} key={task.id} />;
           })}
         </Group>
       </Stack>
@@ -68,8 +73,11 @@ export function ModelDownloading() {
   }
 }
 
-function ModelDownloadingItem({ info }: { info: ModelDownloadingInfoType }) {
+function ModelDownloadingItem({ task }: { task: DownloadingModelTaskType }) {
   const theme = useMantineTheme();
+  const modelDownloadingContext = useModelDownloadingContext();
+  const [closeVisible, setCloseVisible] = useState(false);
+  const info = task.workload;
 
   const progressStr =
     info.progress > 0 ? `${(info.progress * 100).toFixed(1)}%` : "-";
@@ -92,7 +100,36 @@ function ModelDownloadingItem({ info }: { info: ModelDownloadingInfoType }) {
         h={300}
         bg={theme.colors.waLight[1]}
         align={"center"}
+        style={{
+          position: "relative",
+        }}
+        onMouseEnter={() => setCloseVisible(true)}
+        onMouseLeave={() => setCloseVisible(false)}
       >
+        {closeVisible && (
+          <Center
+            w={20}
+            h={20}
+            bg={theme.colors.waLight[6]}
+            style={{
+              position: "absolute",
+              top: "-10px",
+              right: "-10px",
+              borderRadius: 10,
+            }}
+          >
+            <Close
+              width={18}
+              height={18}
+              onClick={() => {
+                modelDownloadingContext.cancelDownloadingTask(
+                  task.id.toString(),
+                );
+              }}
+            />
+          </Center>
+        )}
+
         <AspectRatio
           mt={10}
           ratio={140 / 210}

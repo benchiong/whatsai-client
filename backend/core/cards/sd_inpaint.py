@@ -5,18 +5,17 @@ from core.comps import (
     Comp_CheckpointLoader,
     Comp_CLIPTextEncode,
     Comp_KSampler,
-    Comp_CLIPSetLastLayer,
-    Comp_LoadImageAndPadForOutpainting,
+    Comp_CLIPSetLastLayer, Comp_LoadImageAndMaskForInpainting,
 )
 from core.funcs import Func_VAEDecode, Func_SaveImage
 
 
-class SDOutpaintingCard(Card):
-    name = "Stable-Diffusion-Outpainting"
+class SDInpaintCard(Card):
+    name = "SD-Inpaint"
     meta_data = {
         'name': name,
-        'display_name': "Stable Diffusion Outpainting",
-        'describe': "Outpainting with Stable diffusion.",
+        'display_name': "SD Inpaint",
+        'describe': "Inpaint with Stable diffusion.",
 
         "pre_models": [
             {
@@ -25,7 +24,7 @@ class SDOutpaintingCard(Card):
             }
         ],
 
-        "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/31d00daf-9575-4195-bdb0-69130abe6f7b/width=450/20257461.jpeg"
+        "cover_image": "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/bc6943f5-dc8d-4818-ab02-117533585153/width=450/fcc6ea708bde4ede97169ed207d1ed4d.jpeg"
     }
 
     def __init__(self):
@@ -43,7 +42,7 @@ class SDOutpaintingCard(Card):
 
         positive_prompt = Comp_CLIPTextEncode(
             name='positive_prompt',
-            default_value='outdoors in the yosemite national park mountains nature',
+            default_value='closeup photograph of maine coon (cat:1.2) in the yosemite national park mountains nature',
         )
         positive_prompt.change_param_name_and_display_name('text', 'positive_prompt', 'Prompt')
         self.link(clip, positive_prompt.inputs.clip)
@@ -57,9 +56,9 @@ class SDOutpaintingCard(Card):
         self.link(clip, negative_prompt.inputs.clip)
         negative_cond = self.register_func(negative_prompt)
 
-        latent_from_outpainting = Comp_LoadImageAndPadForOutpainting(name='latent')
-        self.link(vae, latent_from_outpainting.inputs.vae)
-        latent = self.register_func(latent_from_outpainting)
+        latent_from_inpainting = Comp_LoadImageAndMaskForInpainting(name='latent image')
+        self.link(vae, latent_from_inpainting.inputs.vae)
+        latent = self.register_func(latent_from_inpainting)
 
         k_sampler = Comp_KSampler(name='ksampler')
         self.link(model, k_sampler.inputs.model)
