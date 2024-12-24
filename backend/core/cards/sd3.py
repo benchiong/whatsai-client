@@ -1,9 +1,11 @@
+from core.abstracts.addon import AddonOutputToReplace
 from core.abstracts.card import Card
+from core.addons import Addon_SD3Clip
 from core.comps import (
     Comp_CheckpointLoader,
     Comp_CLIPTextEncode,
     Comp_KSampler,
-    Comp_EmptyLatentImage,
+    Comp_EmptyLatentImage, Comp_SD3ClipLoader,
 )
 from core.funcs import Func_VAEDecode, Func_SaveImage
 
@@ -33,8 +35,6 @@ class SD3Card(Card):
             default_model='sd3_medium_incl_clips_t5xxlfp8.safetensors',
         )
         model, clip, vae = self.register_func(load_checkpoint)
-
-        # todo: find a way to solve Clip/DualClip/TripleClip as ComfyUI demo does. Addon may be a solver.
 
         positive_prompt = Comp_CLIPTextEncode(
             name='positive_prompt',
@@ -76,3 +76,15 @@ class SD3Card(Card):
         save_image = Func_SaveImage('save image')
         self.link(pixel_samples, save_image.inputs.images)
         _ = self.register_func(save_image)
+
+        ### Clip Addon
+        addon_clip = Addon_SD3Clip()
+        addon_clip.set_outputs_to_replace(
+            AddonOutputToReplace(func_name='checkpoint', func_output_name='clip', addon_output_name='clip'),
+        )
+
+        self.add_supported_addon(addon_clip)
+
+        self.set_addon_positions({
+            'Clip': 'checkpoint',
+        })

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ModelInfoSchema } from "./model";
 
 const WidgetTypeEnumSchema = z.enum([
   "IntWidget",
@@ -12,6 +11,7 @@ const WidgetTypeEnumSchema = z.enum([
   "ImageWidget",
   "VideoWidget",
   "AudioWidget",
+  "SwitchableWidgets",
   "GroupedWidgets",
 ]);
 export type WidgetTypeEnumType = z.infer<typeof WidgetTypeEnumSchema>;
@@ -90,6 +90,35 @@ export type WidgetUnionsWithoutGroupType = z.infer<
   typeof WidgetUnionsWithoutGroupSchema
 >;
 
+export const WidgetsWithoutGroupSchema = z.array(
+  WidgetUnionsWithoutGroupSchema,
+);
+export type WidgetsWithoutGroupType = z.infer<typeof WidgetsWithoutGroupSchema>;
+
+export const SwitchableItemsSchema = z.record(WidgetsWithoutGroupSchema);
+export type SwitchableItemsType = z.infer<typeof SwitchableItemsSchema>;
+
+export const SingleSelectedSwitchableItemSchema = z.object({
+  selected: z.boolean(),
+  widgets: WidgetsWithoutGroupSchema,
+});
+export const SingleSelectedSwitchableItemType = z.infer<
+  typeof SingleSelectedSwitchableItemSchema
+>;
+
+export const SelectedSwitchableItemsSchema = z.record(
+  SingleSelectedSwitchableItemSchema,
+);
+export type SelectedSwitchableItemsType = z.infer<
+  typeof SelectedSwitchableItemsSchema
+>;
+
+export const SwitchableWidgetsSchema = WidgetSchema.extend({
+  value: SelectedSwitchableItemsSchema,
+  values: SwitchableItemsSchema,
+});
+export type SwitchableWidgetsType = z.infer<typeof SwitchableWidgetsSchema>;
+
 export const GroupedWidgetsSchema = WidgetSchema.extend({
   value: z.array(WidgetUnionsWithoutGroupSchema),
 });
@@ -97,6 +126,7 @@ export type GroupedWidgetsType = z.infer<typeof GroupedWidgetsSchema>;
 
 export const WidgetUnionsSchema = z.union([
   GroupedWidgetsSchema,
+  SwitchableWidgetsSchema,
   WidgetModelComboSchema,
   WidgetComboSchema,
   WidgetIntSchema,

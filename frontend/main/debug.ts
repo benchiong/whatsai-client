@@ -16,5 +16,5 @@
 export const debug_manager = false;
 export const debug_manager_url = "http://127.0.0.1:8820/";
 
-export const debug_backend = false;
+export const debug_backend = true;
 export const debug_backend_server_url = "http://127.0.0.1:8172/";

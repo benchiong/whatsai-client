@@ -1,11 +1,4 @@
-import {
-  Button,
-  Center,
-  FileInput,
-  Group,
-  Stack,
-  useMantineTheme,
-} from "@mantine/core";
+import { Button, Center, Group, Stack, useMantineTheme } from "@mantine/core";
 import React, { useRef, useState } from "react";
 import { Close } from "./Close";
 import { LabelSingleLine } from "./LabelSingleLine";

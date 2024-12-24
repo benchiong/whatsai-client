@@ -954,10 +954,19 @@ class Func_ControlNetApply(Func):
 
 class Func_ClipLoader(Func):
     def __init__(self, name="CLIP Loader"):
-        super().__init__(name=name, )
+        super().__init__(name=name)
 
-    def run(self, clip_hash, type="stable_diffusion"):
-        clip_path = ModelInfo.get(clip_hash).local_path
+        self.set_inputs(
+            IOInfo(name='clip_id', data_type='STRING'),
+            IOInfo(name='type', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='clip', data_type='CLIP'),
+        )
+
+    def run(self, clip_id, type="stable_diffusion"):
+        clip_path = ModelInfo.get(clip_id).local_path
         embedding_directories = ModelDir.get_dirs('embedding')
 
         if type == "stable_cascade":
@@ -966,6 +975,10 @@ class Func_ClipLoader(Func):
             clip_type = comfy.sd.CLIPType.SD3
         elif type == "stable_audio":
             clip_type = comfy.sd.CLIPType.STABLE_AUDIO
+        elif type == "mochi":
+            clip_type = comfy.sd.CLIPType.MOCHI
+        elif type == "ltxv":
+            clip_type = comfy.sd.CLIPType.LTXV
         else:
             clip_type = comfy.sd.CLIPType.STABLE_DIFFUSION
 
@@ -976,12 +989,21 @@ class Func_ClipLoader(Func):
 
 class Func_DualCLIPLoader(Func):
     def __init__(self, name="Dual CLIP Loader"):
-        super().__init__(name=name, )
+        super().__init__(name=name)
+        self.set_inputs(
+            IOInfo(name='clip_id1', data_type='STRING'),
+            IOInfo(name='clip_id2', data_type='STRING'),
+            IOInfo(name='type', data_type='STRING'),
+        )
 
-    def run(self, clip_hash1, clip_hash2, type):
+        self.set_outputs(
+            IOInfo(name='clip', data_type='CLIP'),
+        )
 
-        clip_path1 = ModelInfo.get(clip_hash1).local_path
-        clip_path2 = ModelInfo.get(clip_hash2).local_path
+    def run(self, clip_id1, clip_id2, type):
+
+        clip_path1 = ModelInfo.get(clip_id1).local_path
+        clip_path2 = ModelInfo.get(clip_id2).local_path
         embedding_directories = ModelDir.get_dirs('embedding')
 
         if type == "sdxl":
@@ -998,12 +1020,21 @@ class Func_DualCLIPLoader(Func):
 
 class Func_TripleCLIPLoader(Func):
     def __init__(self, name='Triple CLIP Loader'):
-        super().__init__(name=name, )
+        super().__init__(name=name)
+        self.set_inputs(
+            IOInfo(name='clip_id1', data_type='STRING'),
+            IOInfo(name='clip_id2', data_type='STRING'),
+            IOInfo(name='clip_id3', data_type='STRING'),
+        )
 
-    def run(self, clip_hash1, clip_hash2, clip_hash3):
-        clip_path1 = ModelInfo.get(clip_hash1).local_path
-        clip_path2 = ModelInfo.get(clip_hash2).local_path
-        clip_path3 = ModelInfo.get(clip_hash3).local_path
+        self.set_outputs(
+            IOInfo(name='clip', data_type='CLIP'),
+        )
+
+    def run(self, clip_id1, clip_id2, clip_id3):
+        clip_path1 = ModelInfo.get(clip_id1).local_path
+        clip_path2 = ModelInfo.get(clip_id2).local_path
+        clip_path3 = ModelInfo.get(clip_id3).local_path
         embedding_directories = ModelDir.get_dirs('embedding')
 
         clip = comfy.sd.load_clip(ckpt_paths=[clip_path1, clip_path2, clip_path3],
@@ -1013,10 +1044,18 @@ class Func_TripleCLIPLoader(Func):
 
 class Func_UNETLoader(Func):
     def __init__(self, name='UNET Loader'):
-        super().__init__(name=name, )
+        super().__init__(name=name)
+        self.set_inputs(
+            IOInfo(name='unet_id', data_type='STRING'),
+            IOInfo(name='weight_dtype', data_type='STRING'),
+        )
 
-    def run(self, unet_hash, weight_dtype):
-        unet_path = ModelInfo.get(unet_hash).local_path
+        self.set_outputs(
+            IOInfo(name='model', data_type='MODEL'),
+        )
+
+    def run(self, unet_id, weight_dtype):
+        unet_path = ModelInfo.get(unet_id).local_path
         model_options = {}
         if weight_dtype == "fp8_e4m3fn":
             model_options["dtype"] = torch.float8_e4m3fn

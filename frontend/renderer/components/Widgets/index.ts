@@ -6,6 +6,7 @@ import { WidgetText } from "./WidgetText";
 import { WidgetModelCombo } from "./WidgetModelCombo";
 import { WidgetImage } from "./WidgetImage";
 import { GroupedWidgets } from "./GroupedWidgets";
+import { SwitchableWidgets } from "./SwitchableWidgets";
 
 export type WidgetNameComponentMapType = {
   [key: string]: any;
@@ -18,6 +19,7 @@ export const WidgetNameComponentMap: WidgetNameComponentMapType = {
   TextWidget: WidgetText,
   ModelComboWidget: WidgetModelCombo,
   ImageWidget: WidgetImage,
+  SwitchableWidgets: SwitchableWidgets,
   GroupedWidgets: GroupedWidgets,
 };
 
@@ -32,6 +34,7 @@ export type WidgetAndParams = {
     | typeof WidgetText
     | typeof WidgetModelCombo
     | typeof WidgetImage
+    | typeof SwitchableWidgets
     | typeof GroupedWidgets;
   params: any;
   widgetInfo: any;
@@ -103,6 +106,13 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
       params = {
         text: widgetInfo["display_name"],
         defaultImage: widgetInfo["value"],
+      };
+      break;
+    case SwitchableWidgets:
+      params = {
+        text: widgetInfo["display_name"],
+        values: widgetInfo["values"],
+        value: widgetInfo["value"],
       };
       break;
     case GroupedWidgets:

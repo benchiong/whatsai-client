@@ -27,6 +27,7 @@ export function GroupedWidgets({
   //     setOpened(false);
   //   }
   // }, [widgets]);
+  // todo: use local storage to store card-text as index, support use action remember
 
   return (
     <Stack

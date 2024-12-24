@@ -48,6 +48,18 @@ class CardInfo(BaseModel):
                     parma_name = _widget.get('param_name')
                     value = _widget.get('value')
                     base_inputs[parma_name] = value
+            elif widget_type == 'SwitchableWidgets':
+                comps_with_selection = widget.get('value')
+                for comp_name, widgets_and_selection in comps_with_selection.items():
+                    selected = widgets_and_selection.get('selected', False)
+                    if selected:
+                        base_inputs[widget.get('name')] = comp_name
+                        _widgets = widgets_and_selection.get('widgets', [])
+                        for _widget in _widgets:
+                            parma_name = _widget.get('param_name')
+                            value = _widget.get('value')
+                            base_inputs[parma_name] = value
+                        break
             else:
                 parma_name = widget.get('param_name')
                 value = widget.get('value')
@@ -59,8 +71,35 @@ class CardInfo(BaseModel):
             addon_widgets_list = addon.get('widgets')
             can_turn_off = addon.get('can_turn_off')
             is_off = addon.get('is_off')
+            is_switchable = addon.get('is_switchable')
 
             if can_turn_off and is_off:
+                continue
+
+            if is_switchable:
+                switchable_widget_info = addon_widgets_list[0][0] if addon_widgets_list else None
+                if not switchable_widget_info:
+                    continue
+
+                switchable_comps = switchable_widget_info.get('value')
+
+                addon_inputs_list = []
+                addon_widgets_input = {}
+
+                for comp_name, widgets_and_selection in switchable_comps.items():
+                    selected = widgets_and_selection.get('selected', False)
+
+                    if selected:
+                        addon_widgets_input['selected_comp_name'] = comp_name
+                        _widgets = widgets_and_selection.get('widgets', [])
+                        for _widget in _widgets:
+                            parma_name = _widget.get('param_name')
+                            value = _widget.get('value')
+                            addon_widgets_input[parma_name] = value
+                        addon_inputs_list.append(addon_widgets_input)
+                        break
+
+                addon_inputs[addon_name] = addon_inputs_list
                 continue
 
             addon_inputs_list = []

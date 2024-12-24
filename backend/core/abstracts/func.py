@@ -327,6 +327,7 @@ class Func(ABC):
             else:
                 frm_pos = input_.link.frm.pos
                 func_name, func_idx, param_name = card.map_pos_to_func_and_io_names(pos=frm_pos, is_output=True)
+                logger.debug(f"{func_name} {func_idx} {param_name} {cached_outputs}")
                 input_value = cached_outputs.get_param_output(func_name, func_idx, param_name)
                 assert input_value is not None, f"Input value of {func_name}:{param_name} must be ready here."
                 input_values[input_.name] = input_value

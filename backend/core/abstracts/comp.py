@@ -45,6 +45,9 @@ class Comp(Func):
 
         self.cached_outputs = OutputsCache()
 
+        # todo?: when the comp is optional, design a mechanism to make it work with its backup outputs,
+        #  or keep using addon as the Option solver
+
     @property
     def func_inputs(self):
         return {name: _input for name, _input in self._inputs.items() if _input.is_from_func}
@@ -267,3 +270,60 @@ class Comp(Func):
     @classmethod
     def widgets_info_of_comps(cls, comps):
         return {**{key: value for comp in comps for key, value in comp.widgets_info.items()}}
+
+
+class SwitchableComp(Comp):
+    def __init__(self, name=None, display_name=None, optional=True):
+        super().__init__(name=name, display_name=display_name, optional=optional, grouped_widgets=False)
+
+        self.comps: dict[str: Comp] = {}
+        self.selected_comp_name = None
+
+    def set_comps(self, comp_list: list[Comp]):
+        # todo: make sure outputs of each comp be same?
+        for comp in comp_list:
+            self.comps[comp.name] = comp
+
+    def select_comp(self, comp_name):
+        self.selected_comp_name = comp_name
+        selected_comp = self.comps.get(comp_name)
+        if selected_comp:
+            self._widgets = selected_comp._widgets
+            self.func_list = selected_comp.func_list
+            self.share_io(selected_comp)
+            return selected_comp
+        return None
+
+    @property
+    def widgets_info(self):
+        assert self.name, "SwitchableComp's name must exists and be unique like widget's param_name."
+
+        widgets_info = {}
+        widgets_info_with_selected = {}
+
+        for comp in self.comps.values():
+            widgets_list_info = list(comp.widgets_info.values())
+            widgets_info[comp.display_name] = widgets_list_info
+            widgets_info_with_selected[comp.display_name] = {
+                'selected': comp.display_name == self.selected_comp_name,
+                'widgets': widgets_list_info
+            }
+
+        return {
+            self.display_name: {
+                'param_name': self.name,
+                'display_name': self.display_name,
+                'widget_type': 'SwitchableWidgets',
+                'value': widgets_info_with_selected,
+                'values': widgets_info
+            }
+        }
+
+    def make_type_right_and_valid_inputs(self, inputs: dict):
+        selected_comp_name = inputs.get(self.name)
+        if selected_comp_name:
+            selected_comp = self.select_comp(comp_name=selected_comp_name)
+            if selected_comp:
+                return selected_comp.make_type_right_and_valid_inputs(inputs)
+        else:
+            return inputs, []

@@ -157,6 +157,9 @@ class Card(ABC):
                 self.unregister_func(addon)
                 continue
 
+            if addon.is_switchable:
+                addon.create_comps_with_inputs(addon_input)
+
             errors = addon.make_type_right_and_valid_inputs(addon_inputs)
             if errors:
                 validation_errors.extend(errors)
@@ -171,7 +174,9 @@ class Card(ABC):
             self.unlink_addon(addon)
             self.unregister_func(addon)
 
-            addon.create_comps_with_inputs(addon_input)
+            if not addon.is_switchable:
+                addon.create_comps_with_inputs(addon_input)
+
             self.register_func_after(addon, after)
             self.relink_addon(addon)
 

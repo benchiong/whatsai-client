@@ -324,7 +324,7 @@ class AudioWidget(FileWidget):
 
 class GroupedWidgets(Widget):
     """ It exists in logic, but not used, Comp do the creation thing.
-        See core.abstracts.comp.Comp.widgets_dict_grouped_widgets_considered for detail
+        See core.abstracts.comp.Comp.widgets_info for detail
      """
 
     def __init__(self, display_name, widgets, param_name, default_value, value_type):
@@ -336,6 +336,10 @@ class GroupedWidgets(Widget):
 
 def list_checkpoints(base_model: str | None = None):
     return ModelInfo.get_model_infos(model_type='checkpoint')
+
+
+def list_clips():
+    return ModelInfo.get_model_infos(model_type='clip')
 
 
 def list_loras(base_model: str | None = None):
@@ -365,6 +369,7 @@ def list_controlnets():
 
 WIDGET_FUNCTION_MAP = {
     'list_checkpoints': list_checkpoints,
+    'list_clips': list_clips,
     'list_loras': list_loras,
     'list_vaes': list_vaes,
     'list_hypernets': list_hypernets,

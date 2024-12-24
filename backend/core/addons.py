@@ -2,10 +2,9 @@ from core.abstracts.addon import Addon
 from core.comps import (
     Comp_VAELoader,
     Comp_LoRALoader,
-    Comp_KSampler,
     Comp_HypernetLoader,
     Comp_UpscaleImageUsingModel,
-    Comp_LoadAndApplyControlNet,
+    Comp_LoadAndApplyControlNet, Comp_SD3ClipLoader,
 )
 
 
@@ -68,10 +67,28 @@ class Addon_ControlNet(Addon):
         self.comp_class = Comp_LoadAndApplyControlNet
 
 
+class Addon_SD3Clip(Addon):
+    addon_type = 'Clip'
+
+    def __init__(self):
+        super().__init__(
+            name='Clip',
+            display_name='Clip',
+            can_user_add_new=False,
+            can_turn_off=False,
+            is_switchable=True
+        )
+
+    def init_comp_unit_or_comp_list(self):
+        clip_comp = Comp_SD3ClipLoader()
+        self.register_comp(clip_comp)
+
+
 ADD_ON_CLASS_MAP = {
     Addon_Vae.addon_type: Addon_Vae,
     Addon_LoRA.addon_type: Addon_LoRA,
     Addon_Hypernet.addon_type: Addon_Hypernet,
     Addon_Upscale.addon_type: Addon_Upscale,
-    Addon_ControlNet.addon_type: Addon_Upscale
+    Addon_ControlNet.addon_type: Addon_Upscale,
+    Addon_SD3Clip.addon_type: Addon_SD3Clip
 }

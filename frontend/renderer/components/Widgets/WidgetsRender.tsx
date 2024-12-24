@@ -12,7 +12,7 @@ export function WidgetsRender({
 }: {
   widgets: WidgetsType;
   onChange: (changedWidgets: WidgetsType) => void;
-  width?: number;
+  width?: number | string;
   height?: number;
   positionIndex?: number | null;
 }) {

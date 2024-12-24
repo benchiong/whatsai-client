@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Type
 
 from core.abstracts.cache import OutputsCache
-from core.abstracts.comp import Comp
+from core.abstracts.comp import Comp, SwitchableComp
 
 
 class AddonInputToLink:
@@ -47,7 +47,7 @@ class Addon(Comp):
     """
     addon_type = None
 
-    def __init__(self, name, display_name, can_user_add_new=False, can_turn_off=False):
+    def __init__(self, name, display_name, can_user_add_new=False, can_turn_off=False, is_switchable=False):
         super().__init__(name)
         """ The name should exactly same as addon_type. """
 
@@ -62,6 +62,9 @@ class Addon(Comp):
 
         self.can_turn_off = can_turn_off
         """ Some addon need to turn off explicitly, e.g. HiresAddon """
+
+        self.is_switchable = is_switchable
+        """ Some addon can be switchable, e.g. SD3Clip """
 
         self.comp_class: Type[Comp] | None = None
         """ The class of comp to create comp list of addon when can_user_add_new is True, 
@@ -117,6 +120,17 @@ class Addon(Comp):
 
                 self.register_comp(comp)
                 prev_comp = comp
+
+        elif self.is_switchable:
+            switchable_comp = self.comp_list[0]
+            comp_inputs_info = inputs[0]
+            selected_comp_name = comp_inputs_info.get('selected_comp_name')
+
+            switchable_comp.select_comp(selected_comp_name)
+
+            self.share_io(switchable_comp)
+            self.comp_list = [switchable_comp]
+
         else:
             pass
             """ It should be initialized in init_comp_unit_or_comp_list. """
@@ -224,6 +238,7 @@ class Addon(Comp):
             'display_name': self.display_name,
             'comp_list': self.can_user_add_new,
             'can_turn_off': self.can_turn_off,
+            'is_switchable': self.is_switchable,
             'comp_widgets': self.widgets_info_in_list,  # use this to tell frontend how to render new.
             'widgets': [self.widgets_info_in_list],  # use this to get inputs from frontend.
             'is_off': True if self.can_turn_off else None

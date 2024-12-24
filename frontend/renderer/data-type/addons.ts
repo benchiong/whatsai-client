@@ -8,6 +8,7 @@ export const AddonSchema = z.object({
   display_name: z.string(),
   comp_list: z.boolean(),
   can_turn_off: z.boolean(),
+  is_switchable: z.boolean(),
   is_off: z.boolean().optional().nullable(),
   comp_widgets: CompWidgetsSchema, // use this to render new addon comp if it is comp list
   widgets: AddonWidgetsSchema, // use this to get user's inputs

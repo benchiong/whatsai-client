@@ -1,4 +1,4 @@
-from core.abstracts.comp import Comp
+from core.abstracts.comp import Comp, SwitchableComp
 from core.funcs import (
     Func_CheckpointLoaderSimple,
     Func_CLIPTextEncode,
@@ -17,7 +17,10 @@ from core.funcs import (
     Func_ControlNetLoader,
     Func_ControlNetApply,
     Func_ImagePadForOutpaint,
-    Func_KSamplerAdvanced
+    Func_KSamplerAdvanced,
+    Func_ClipLoader,
+    Func_DualCLIPLoader,
+    Func_TripleCLIPLoader
 )
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget
 
@@ -682,9 +685,116 @@ class Comp_LoadAndApplyControlNet(Comp):
         self.share_outputs(func_apply_controlnet)
 
 
-class Comp_SD3CLIPLoader(Comp):
+class Comp_ClipLoader(Comp):
     def __init__(self,
-                 name="SD3 Clip Loader",
-                 display_name='SD3 Clip Loader',
+                 name="Load CLIP",
+                 display_name='Load CLIP',
+                 default_clip_id='t5xxl_fp16.safetensors',
+                 default_model_type='sd3'
                  ):
         super().__init__(name=name, display_name=display_name)
+
+        func_load_clip = Func_ClipLoader()
+        self.register_func(func_load_clip)
+
+        widget_model_list = ModelComboWidget(
+            display_name='Clip Model',
+            param_name='clip_id',
+            values_function_name='list_clips',
+            default_value=default_clip_id
+        )
+        self.register_widget(widget_model_list)
+
+        widget_clip_type = ComboWidget(
+            display_name='Model Type',
+            param_name='type',
+            default_value=default_model_type,
+            values=["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv"]
+        )
+        self.register_widget(widget_clip_type)
+
+
+class Comp_DualCLIPLoader(Comp):
+    def __init__(self,
+                 name="Dual CLIP Loader",
+                 display_name="Dual CLIP Loader",
+                 default_clip_id1='clip_l.safetensors',
+                 default_clip_id2='clip_g.safetensors',
+                 default_model_type='sd3'
+                 ):
+        super().__init__(name=name, display_name=display_name)
+
+        func_load_dual_clip = Func_DualCLIPLoader()
+        self.register_func(func_load_dual_clip)
+
+        widget_clip1 = ModelComboWidget(
+            display_name='Clip 1',
+            param_name='clip_id1',
+            values_function_name='list_clips',
+            default_value=default_clip_id1
+        )
+        self.register_widget(widget_clip1)
+
+        widget_clip2 = ModelComboWidget(
+            display_name='Clip 2',
+            param_name='clip_id2',
+            values_function_name='list_clips',
+            default_value=default_clip_id2
+        )
+        self.register_widget(widget_clip2)
+
+        widget_clip_type = ComboWidget(
+            display_name='Model Type',
+            param_name='type',
+            default_value=default_model_type,
+            values=["sdxl", "sd3", "flux"]
+        )
+        self.register_widget(widget_clip_type)
+
+
+class Comp_TripleCLIPLoader(Comp):
+    def __init__(self,
+                 name="Triple CLIP Loader",
+                 display_name="Triple CLIP Loader",
+                 default_clip_id1='clip_l.safetensors',
+                 default_clip_id2='clip_g.safetensors',
+                 default_clip_id3='t5xxl_fp16.safetensors',
+                 ):
+        super().__init__(name=name, display_name=display_name)
+
+        func_load_triple_clip = Func_TripleCLIPLoader()
+        self.register_func(func_load_triple_clip)
+
+        widget_clip1 = ModelComboWidget(
+            display_name='Clip 1',
+            param_name='clip_id1',
+            values_function_name='list_clips',
+            default_value=default_clip_id1
+        )
+        self.register_widget(widget_clip1)
+
+        widget_clip2 = ModelComboWidget(
+            display_name='Clip 2',
+            param_name='clip_id2',
+            values_function_name='list_clips',
+            default_value=default_clip_id2
+        )
+        self.register_widget(widget_clip2)
+
+        widget_clip3 = ModelComboWidget(
+            display_name='Clip 3',
+            param_name='clip_id3',
+            values_function_name='list_clips',
+            default_value=default_clip_id3
+        )
+        self.register_widget(widget_clip3)
+
+
+class Comp_SD3ClipLoader(SwitchableComp):
+    def __init__(self, name='SD3ClipLoader', display_name='SD3 Clip Loader'):
+        super().__init__(name=name, display_name=display_name)
+        comp_clip_loader = Comp_ClipLoader(name='Single Clip', display_name='Single Clip')
+        comp_dual_clip_loader = Comp_DualCLIPLoader(name='Dual Clip', display_name='Dual Clip')
+        comp_triple_loader = Comp_TripleCLIPLoader(name='Triple Clip', display_name='Triple Clip')
+        self.set_comps([comp_clip_loader, comp_dual_clip_loader, comp_triple_loader])
+        self.select_comp('Triple Clip')

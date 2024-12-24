@@ -13,7 +13,7 @@ from data_type.whatsai_input_file import InputFile
 from data_type.whatsai_artwork import Artwork
 from misc.helpers import file_type_guess
 from misc.logger import logger
-from prompt_worker import TaskQueue, PromptWorker
+from prompt_worker import TaskQueue
 
 router = APIRouter()
 
