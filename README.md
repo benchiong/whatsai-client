@@ -27,11 +27,69 @@ Simply put: You can translate any ComfyUI workflow into a WhatsAI Card (a UI bui
 | Flux Schnell                   | [ComfyUI Flux Schnell](https://comfyanonymous.github.io/ComfyUI_examples/flux/#flux-schnell)  |
 | Flux Inpaint    | [ComfyUI Flux Inpaint](https://comfyanonymous.github.io/ComfyUI_examples/flux/#fill-inpainting-model)   |
 | Flux Outpaint   | [ComfyUI Flux Outpaint](https://comfyanonymous.github.io/ComfyUI_examples/flux/#fill-inpainting-model)    |
+| Lightricks Text-to-Video    | [ComfyUI LTX-T2V](https://comfyanonymous.github.io/ComfyUI_examples/ltxv/#text-to-video)   |
+| Lightricks Image-to-Video   | [ComfyUI LTX-I2V](https://comfyanonymous.github.io/ComfyUI_examples/ltxv/#image-to-video)    |
 
 more are coming... 
 
-![cover](https://github.com/user-attachments/assets/517e55cf-f640-433f-859e-750dffae1440)
+![cover](https://github.com/user-attachments/assets/73759797-e14a-48ea-9a76-d47c46b6f931)
 
+### Installation
+
+This project consists of an **Electron + Next.js frontend** and a **Python backend**. The `backend-manager` is a utility tool designed to manage the backend during packaging. For now, you can ignore it since the packaging process is still being optimized.
+
+#### Steps to Install
+
+##### Clone the repository
+
+git clone [https://github.com/your-repo-name.git](https://github.com/benchiong/whatsai-client.git)
+
+##### Install the Frontend (Electron + Next.js):
+
+cd frontend
+
+__Install dependencies: Ensure you have Node.js installed.__
+
+```bash
+npm install
+nextron --renderer-port 6791
+
+This will start the Next.js frontend and Electron in development mode.
+
+```
+
+__Install the Backend (Python):__
+
+Navigate to the backend directory:
+```bash
+cd backend
+
+# (Optional) Set up a Python virtual environment:
+python3 -m venv venv
+source venv/bin/activate
+
+# On Windows: venv\Scripts\activate
+
+
+```
+__Install dependencies: Ensure you have Python 3.12 installed.__
+
+```bash
+
+pip install -r requirements.txt
+python main.py
+
+```
+
+You can also check out the [ComfyUI](https://github.com/comfyanonymous/ComfyUI) installation guide for reference.
+
+
+Ensure both the frontend and backend are running simultaneously for the full application to work.
+
+Frontend dependencies are listed in package.json, while backend dependencies are managed via requirements.txt.
+If you encounter issues, verify that your Node.js and Python versions meet the requirements.
+
+You
 
 ## Credits
 - ComfyUI - https://github.com/comfyanonymous/ComfyUI
