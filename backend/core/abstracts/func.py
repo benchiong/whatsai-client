@@ -7,6 +7,8 @@ from core.abstracts.cache import OutputsCache
 from data_type.whatsai_card import Prompt
 from misc.logger import logger
 
+# todo: add param optional support?
+
 InputSource = Literal['widget', 'func']
 """ Input Source of a func param, widget means it comes from use input, other func otherwise. """
 

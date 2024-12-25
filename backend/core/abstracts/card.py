@@ -9,7 +9,8 @@ from .addon import Addon
 from .comp import Comp
 from .func import Func, FuncOutput, FuncInput, Link, ParamPos
 from ..addons import ADD_ON_CLASS_MAP
-from ..funcs import Func_KSampler, Func_KSamplerAdvanced, Func_SamplerCustomAdvanced
+from ..comps import Comp_SamplerCustom
+from ..funcs import Func_KSampler, Func_KSamplerAdvanced, Func_SamplerCustomAdvanced, Func_SamplerCustom
 
 
 class CardMetaData(BaseModel):
@@ -472,6 +473,8 @@ class Card(ABC):
             if (isinstance(func, Func_KSampler)
                     or isinstance(func, Func_KSamplerAdvanced)
                     or isinstance(func, Func_SamplerCustomAdvanced)
+                    or isinstance(func, Comp_SamplerCustom)
+                    or isinstance(func, Func_SamplerCustom)
             ):
                 k_samplers.append(func)
         return k_samplers

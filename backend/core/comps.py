@@ -20,8 +20,18 @@ from core.funcs import (
     Func_KSamplerAdvanced,
     Func_ClipLoader,
     Func_DualCLIPLoader,
-    Func_TripleCLIPLoader, Func_FluxGuidance, Func_UNETLoader, Func_BasicScheduler, Func_KSamplerSelect,
-    Func_RandomNoise, Func_InpaintModelConditioning
+    Func_TripleCLIPLoader,
+    Func_FluxGuidance,
+    Func_UNETLoader,
+    Func_BasicScheduler,
+    Func_KSamplerSelect,
+    Func_RandomNoise,
+    Func_InpaintModelConditioning,
+    Func_LTXVConditioning,
+    Func_EmptyLTXVLatentVideo,
+    Func_LTXVScheduler,
+    Func_SamplerCustom,
+    Func_SaveAnimatedWEBP, Func_LTXVImgToVideo
 )
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget, \
     BoolWidget
@@ -932,8 +942,8 @@ class Comp_UNETLoader(Comp):
 
 class Comp_BasicScheduler(Comp):
     def __init__(self, name='BasicScheduler', display_name='Basic Scheduler', scheduler_name='simple', steps=20,
-                 denoise=1.0):
-        super().__init__(name=name, display_name=display_name)
+                 denoise=1.0, grouped_widgets=True):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
 
         basic_scheduler = Func_BasicScheduler()
         self.register_func(basic_scheduler)
@@ -1012,3 +1022,267 @@ class Comp_InpaintModelConditioning(Comp):
             default_value=noise_mask
         )
         self.register_widget(widget_noise_mask)
+
+
+class Comp_LTXVConditioning(Comp):
+    def __init__(self, name='LTXVConditioning', display_name='LTXV Conditioning', frame_rate=25.0):
+        super().__init__(name=name, display_name=display_name)
+
+        ltxv_cond = Func_LTXVConditioning()
+        self.register_func(ltxv_cond)
+
+        widget_frame_rate = FloatWidget(
+            display_name='Frame Rate',
+            param_name='frame_rate',
+            default_value=frame_rate,
+            min=0.0,
+            max=1000.0,
+            step=0.1,
+            round=2
+        )
+        self.register_widget(widget_frame_rate)
+
+
+class Comp_EmptyLTXVLatentVideo(Comp):
+    def __init__(self,
+                 name='EmptyLTXVLatentVideo',
+                 display_name='Empty LTXV Latent Video',
+                 width=768,
+                 height=512,
+                 length=97,
+                 grouped_widgets=True
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
+
+        empty_latent_video = Func_EmptyLTXVLatentVideo()
+        self.register_func(empty_latent_video)
+
+        widget_width = IntWidget(
+            display_name='Width',
+            param_name='width',
+            default_value=width,
+            min=64,
+            max=5120,
+            step=32
+        )
+        self.register_widget(widget_width)
+
+        widget_height = IntWidget(
+            display_name='Height',
+            param_name='height',
+            default_value=height,
+            min=64,
+            max=5120,
+            step=32
+        )
+        self.register_widget(widget_height)
+
+        widget_length = IntWidget(
+            display_name='Length',
+            param_name='length',
+            default_value=length,
+            min=1,
+            max=5120,
+            step=8
+        )
+        self.register_widget(widget_length)
+
+
+class Comp_LTXVScheduler(Comp):
+    def __init__(self,
+                 name='LTXVScheduler',
+                 display_name='LTXV Scheduler',
+                 steps=20,
+                 max_shift=2.05,
+                 base_shift=0.95,
+                 stretch=True,
+                 terminal=0.1,
+                 grouped_widgets=True
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
+
+        ltxv_scheduler = Func_LTXVScheduler()
+        self.register_func(ltxv_scheduler)
+
+        widget_steps = IntWidget(
+            display_name='Steps',
+            param_name='steps',
+            default_value=steps,
+            min=1,
+            max=10000,
+        )
+        self.register_widget(widget_steps)
+
+        widget_max_shift = FloatWidget(
+            display_name='Max Shift',
+            param_name='max_shift',
+            default_value=max_shift,
+            min=0.0,
+            max=100.0,
+            step=0.01,
+        )
+        self.register_widget(widget_max_shift)
+
+        widget_base_shift = FloatWidget(
+            display_name='Base Shift',
+            param_name='base_shift',
+            default_value=base_shift,
+            min=0.0,
+            max=100.0,
+            step=0.01,
+        )
+        self.register_widget(widget_base_shift)
+
+        widget_stretch = BoolWidget(
+            display_name='Stretch',
+            param_name='stretch',
+            default_value=stretch
+        )
+        self.register_widget(widget_stretch)
+
+        widget_terminal = FloatWidget(
+            display_name='Terminal',
+            param_name='terminal',
+            default_value=terminal,
+            min=0.0,
+            max=0.99,
+            step=0.01,
+        )
+        self.register_widget(widget_terminal)
+
+
+class Comp_SamplerCustom(Comp):
+    def __init__(self,
+                 name='SamplerCustom',
+                 display_name='Sampler Custom',
+                 add_noise=True,
+                 noise_seed=1001,
+                 cfg=3.0,
+                 grouped_widgets=True,
+                 preview_steps=1
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
+
+        sampler_custom = Func_SamplerCustom(preview_steps=preview_steps)
+        self.register_func(sampler_custom)
+
+        widget_add_noise = BoolWidget(
+            display_name='add_noise',
+            param_name='add_noise',
+            default_value=add_noise
+        )
+        self.register_widget(widget_add_noise)
+
+        widget_noise_seed = SeedWidget(
+            display_name='Seed',
+            param_name='noise_seed',
+            default_value=noise_seed
+        )
+        self.register_widget(widget_noise_seed)
+
+        widget_cfg = FloatWidget(
+            display_name='CFG Scale',
+            param_name='cfg',
+            default_value=cfg,
+            min=0.0,
+            max=100.0,
+            step=0.1,
+            round=2
+        )
+        self.register_widget(widget_cfg)
+
+
+class Comp_SaveAnimatedWEBP(Comp):
+    def __init__(self,
+                 name='SaveAnimatedWEBP',
+                 display_name='Save Animated WEBP',
+                 fps=6.0,
+                 lossless=True,
+                 quality=80,
+                 method='default',
+                 grouped_widgets=True
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
+
+        save_animated_webp = Func_SaveAnimatedWEBP()
+        self.register_func(save_animated_webp)
+
+        widget_fps = FloatWidget(
+            display_name='FPS',
+            param_name='fps',
+            default_value=fps,
+            min=0.01,
+            max=1000.0,
+            step=0.1,
+            round=2
+        )
+        self.register_widget(widget_fps)
+
+        widget_lossless = BoolWidget(
+            display_name='Lossless',
+            param_name='lossless',
+            default_value=lossless
+        )
+        self.register_widget(widget_lossless)
+
+        widget_quality = IntWidget(
+            display_name='Quality',
+            param_name='quality',
+            default_value=quality,
+            min=0,
+            max=100,
+        )
+        self.register_widget(widget_quality)
+
+        widget_method = ComboWidget(
+            display_name='Method',
+            param_name='method',
+            default_value=method,
+            values=save_animated_webp.method_names
+        )
+        self.register_widget(widget_method)
+
+
+class Comp_LTXVImgToVideo(Comp):
+    def __init__(self,
+                 name='LTXVImgToVideo',
+                 display_name='LTXV Image To Video',
+                 width=768,
+                 height=512,
+                 length=97,
+                 grouped_widgets=True
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
+
+        ltxv_img_to_video = Func_LTXVImgToVideo()
+        self.register_func(ltxv_img_to_video)
+
+        widget_width = IntWidget(
+            display_name='Width',
+            param_name='width',
+            default_value=width,
+            min=64,
+            max=5120,
+            step=32
+        )
+        self.register_widget(widget_width)
+
+        widget_height = IntWidget(
+            display_name='Height',
+            param_name='height',
+            default_value=height,
+            min=64,
+            max=5120,
+            step=32
+        )
+        self.register_widget(widget_height)
+
+        widget_length = IntWidget(
+            display_name='Length',
+            param_name='length',
+            default_value=length,
+            min=1,
+            max=5120,
+            step=8
+        )
+        self.register_widget(widget_length)

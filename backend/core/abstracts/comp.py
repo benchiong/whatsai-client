@@ -254,7 +254,7 @@ class Comp(Func):
             inputs[param_name] = widget.make_type_right(param_value)
             error = widget.valid_input(param_value)
             if error:
-                errors.append(error)
+                errors.append(f"func: {self.name} got error: {error}")
             widget_param_names.remove(param_name)
 
         if widget_param_names:

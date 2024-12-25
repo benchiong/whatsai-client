@@ -12,13 +12,14 @@ from misc.helpers import thumbnail, get_file_created_timestamp_and_datetime
 from misc.logger import logger
 from misc.whatsai_dirs import get_dir_of_media_type
 
+
 class ThumbImage(BaseModel):
     file_path: Optional[str] = None
     thumb_width: Optional[int] = None
     thumb_height: Optional[int] = None
 
-class Artwork(PyDBModel):
 
+class Artwork(PyDBModel):
     file_path: str
     media_type: MediaType
     meta_info: Optional[dict] = None
@@ -182,8 +183,8 @@ class Artwork(PyDBModel):
             return [cls.from_row(row) for row in rows]
 
     @classmethod
-    def create_file_path(cls, media_type: MediaType):
-        filename = datetime.now().strftime('%Y%m%d-%H%M%S') + '.png'
+    def create_file_path(cls, media_type: MediaType, ext='.png'):
+        filename = datetime.now().strftime('%Y%m%d-%H%M%S') + ext
         path = get_dir_of_media_type(media_type)
         return str(path / filename)
 

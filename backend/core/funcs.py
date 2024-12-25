@@ -229,12 +229,29 @@ class TAESDPreviewerImpl(LatentPreviewer):
 
 
 class Latent2RGBPreviewer(LatentPreviewer):
-    def __init__(self, latent_rgb_factors):
-        self.latent_rgb_factors = torch.tensor(latent_rgb_factors, device="cpu")
+    def __init__(self, latent_rgb_factors, latent_rgb_factors_bias=None):
+        # self.latent_rgb_factors = torch.tensor(latent_rgb_factors, device="cpu")
+        self.latent_rgb_factors = torch.tensor(latent_rgb_factors, device="cpu").transpose(0, 1)
+        self.latent_rgb_factors_bias = None
+        if latent_rgb_factors_bias is not None:
+            self.latent_rgb_factors_bias = torch.tensor(latent_rgb_factors_bias, device="cpu")
 
     def decode_latent_to_preview_base64(self, x0):
+        # self.latent_rgb_factors = self.latent_rgb_factors.to(dtype=x0.dtype, device=x0.device)
+        # latent_image = x0[0].permute(1, 2, 0) @ self.latent_rgb_factors
+        # return preview_to_base64(latent_image)
+
         self.latent_rgb_factors = self.latent_rgb_factors.to(dtype=x0.dtype, device=x0.device)
-        latent_image = x0[0].permute(1, 2, 0) @ self.latent_rgb_factors
+        if self.latent_rgb_factors_bias is not None:
+            self.latent_rgb_factors_bias = self.latent_rgb_factors_bias.to(dtype=x0.dtype, device=x0.device)
+
+        if x0.ndim == 5:
+            x0 = x0[0, :, 0]
+        else:
+            x0 = x0[0]
+
+        latent_image = torch.nn.functional.linear(x0.movedim(0, -1), self.latent_rgb_factors,
+                                                  bias=self.latent_rgb_factors_bias)
         return preview_to_base64(latent_image)
 
 
@@ -408,7 +425,10 @@ class Func_VAEDecode(Func):
         )
 
     def run(self, vae, samples):
-        return (vae.decode(samples["samples"]),)
+        images = vae.decode(samples["samples"])
+        if len(images.shape) == 5:  # Combine batches
+            images = images.reshape(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+        return (images,)
 
 
 class Func_VAEEncode(Func):
@@ -1340,3 +1360,282 @@ class Func_DifferentialDiffusion(Func):
         threshold = (current_ts - ts_to) / (ts_from - ts_to)
 
         return (denoise_mask >= threshold).to(denoise_mask.dtype)
+
+
+class Func_LTXVConditioning(Func):
+    def __init__(self, name='LTXVConditioning'):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='frame_rate', data_type='FLOAT'),
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+        )
+
+    def run(self, positive, negative, frame_rate):
+        positive = conditioning_set_values(positive, {"frame_rate": frame_rate})
+        negative = conditioning_set_values(negative, {"frame_rate": frame_rate})
+        return (positive, negative)
+
+
+class Func_EmptyLTXVLatentVideo(Func):
+    def __init__(self, name='EmptyLTXVLatentVideo'):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='width', data_type='INT'),
+            IOInfo(name='height', data_type='INT'),
+            IOInfo(name='length', data_type='INT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, width, height, length, batch_size=1):
+        latent = torch.zeros([batch_size, 128, ((length - 1) // 8) + 1, height // 32, width // 32],
+                             device=comfy.model_management.intermediate_device())
+        return ({"samples": latent},)
+
+
+class Func_LTXVScheduler(Func):
+    def __init__(self, name='LTXVScheduler'):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='latent', data_type='LATENT'),
+            IOInfo(name='steps', data_type='INT'),
+            IOInfo(name='max_shift', data_type='FLOAT'),
+            IOInfo(name='base_shift', data_type='FLOAT'),
+            IOInfo(name='stretch', data_type='BOOLEAN'),
+            IOInfo(name='terminal', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='sigmas', data_type='SIGMAS'),
+        )
+
+    def run(self, steps, max_shift, base_shift, stretch, terminal, latent=None):
+        if latent is None:
+            tokens = 4096
+        else:
+            tokens = math.prod(latent["samples"].shape[2:])
+
+        sigmas = torch.linspace(1.0, 0.0, steps + 1)
+
+        x1 = 1024
+        x2 = 4096
+        mm = (max_shift - base_shift) / (x2 - x1)
+        b = base_shift - mm * x1
+        sigma_shift = (tokens) * mm + b
+
+        power = 1
+        sigmas = torch.where(
+            sigmas != 0,
+            math.exp(sigma_shift) / (math.exp(sigma_shift) + (1 / sigmas - 1) ** power),
+            0,
+        )
+
+        # Stretch sigmas so that its final value matches the given terminal value.
+        if stretch:
+            non_zero_mask = sigmas != 0
+            non_zero_sigmas = sigmas[non_zero_mask]
+            one_minus_z = 1.0 - non_zero_sigmas
+            scale_factor = one_minus_z[-1] / (1.0 - terminal)
+            stretched = 1.0 - (one_minus_z / scale_factor)
+            sigmas[non_zero_mask] = stretched
+
+        return (sigmas,)
+
+
+class Noise_EmptyNoise:
+    def __init__(self):
+        self.seed = 0
+
+    def generate_noise(self, input_latent):
+        latent_image = input_latent["samples"]
+        return torch.zeros(latent_image.shape, dtype=latent_image.dtype, layout=latent_image.layout, device="cpu")
+
+
+class Func_SamplerCustom(Func):
+
+    def __init__(self, name="SamplerCustom", preview_method=LatentPreviewMethod.Auto,
+                 preview_steps=3):
+        super().__init__(name)
+
+        self.preview_method = preview_method
+        self.previewer = None
+        self.preview_steps = preview_steps
+        self.callback = None
+        self.x0_output_dict = {}
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='add_noise', data_type='BOOLEAN'),
+            IOInfo(name='noise_seed', data_type='INT'),
+            IOInfo(name='cfg', data_type='FLOAT'),
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='sampler', data_type='SAMPLER'),
+            IOInfo(name='sigmas', data_type='SIGMAS'),
+            IOInfo(name='latent_image', data_type='LATENT'),
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='output', data_type='LATENT'),
+            IOInfo(name='denoised_output', data_type='LATENT'),
+        )
+
+    def set_callback(self, cb):
+        self.callback = cb
+
+    def get_callback(self):
+        if not self.callback:
+            return None
+
+        def _callback(step, x0, x, total_steps):
+            """ Return step, total_steps, and preview_bytes. """
+
+            self.x0_output_dict["x0"] = x0
+
+            step += 1
+            if step == 1 or step == total_steps or step % self.preview_steps == 0:
+                preview_bytes = self.previewer.decode_latent_to_preview_base64(x0)
+                self.callback(step, total_steps, preview_bytes)
+
+        return _callback
+
+    def run(self, model, add_noise, noise_seed, cfg, positive, negative, sampler, sigmas, latent_image):
+
+        if not self.previewer:
+            self.previewer = get_previewer(self.preview_method, model.load_device, model.model.latent_format)
+
+        latent = latent_image
+        latent_image = latent["samples"]
+        latent = latent.copy()
+        latent_image = comfy.sample.fix_empty_latent_channels(model, latent_image)
+        latent["samples"] = latent_image
+
+        if not add_noise:
+            noise = Noise_EmptyNoise().generate_noise(latent)
+        else:
+            noise = Noise_RandomNoise(noise_seed).generate_noise(latent)
+
+        noise_mask = None
+        if "noise_mask" in latent:
+            noise_mask = latent["noise_mask"]
+
+        disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
+        samples = comfy.sample.sample_custom(model, noise, cfg, sampler, sigmas, positive, negative, latent_image,
+                                             noise_mask=noise_mask, callback=self.get_callback(),
+                                             disable_pbar=disable_pbar, seed=noise_seed)
+
+        out = latent.copy()
+        out["samples"] = samples
+        if "x0" in self.x0_output_dict:
+            out_denoised = latent.copy()
+            out_denoised["samples"] = model.model.process_latent_out(self.x0_output_dict["x0"].cpu())
+        else:
+            out_denoised = out
+        return (out, out_denoised)
+
+
+class Func_SaveAnimatedWEBP(Func):
+    def __init__(self, name='SaveAnimatedWEBP'):
+        super().__init__(name=name)
+
+        self.methods = {"default": 4, "fastest": 0, "slowest": 6}
+
+        self.set_inputs(
+            IOInfo(name='images', data_type='IMAGE'),
+            IOInfo(name='fps', data_type='FLOAT'),
+            IOInfo(name='lossless', data_type='BOOLEAN'),
+            IOInfo(name='quality', data_type='INT'),
+            IOInfo(name='method', data_type='STRING'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='result', data_type='RESULT'),
+        )
+
+    @property
+    def method_names(self):
+        return list(self.methods.keys())
+
+    def run(self, images, fps, lossless, quality, method, num_frames=0):
+        assert self.prompt, "Prompt must be set where func registered."
+
+        method = self.methods.get(method)
+        results = list()
+
+        pil_images = []
+        for image in images:
+            i = 255. * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            pil_images.append(img)
+
+        metadata = pil_images[0].getexif()
+        metadata[0x0110] = "prompt:{}".format(json.dumps(self.prompt.model_dump()))
+
+        if num_frames == 0:
+            num_frames = len(pil_images)
+
+        c = len(pil_images)
+        for i in range(0, c, num_frames):
+            file_path = Artwork.create_file_path(media_type='image', ext='.webp')
+            pil_images[i].save(file_path, save_all=True, duration=int(1000.0 / fps),
+                               append_images=pil_images[i + 1:i + num_frames], exif=metadata, lossless=lossless,
+                               quality=quality, method=method)
+
+            meta_info = get_meta_info(file_path)
+            artwork = Artwork.add_art_work(
+                file_path=file_path,
+                card_name=self.prompt.card_name,
+                media_type='image',
+                meta_info=meta_info,
+                prompt=self.prompt,
+            )
+            results.append(artwork)
+
+        return ({"images": results},)
+
+
+class Func_LTXVImgToVideo(Func):
+    def __init__(self, name='LTXVImgToVideo'):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='vae', data_type='VAE'),
+            IOInfo(name='image', data_type='IMAGE'),
+
+            IOInfo(name='width', data_type='INT'),
+            IOInfo(name='height', data_type='INT'),
+            IOInfo(name='length', data_type='INT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='positive', data_type='CONDITIONING'),
+            IOInfo(name='negative', data_type='CONDITIONING'),
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, positive, negative, image, vae, width, height, length, batch_size=1):
+        pixels = comfy.utils.common_upscale(image.movedim(-1, 1), width, height, "bilinear", "center").movedim(1, -1)
+        encode_pixels = pixels[:, :, :, :3]
+        t = vae.encode(encode_pixels)
+        positive = conditioning_set_values(positive, {"guiding_latent": t})
+        negative = conditioning_set_values(negative, {"guiding_latent": t})
+
+        latent = torch.zeros([batch_size, 128, ((length - 1) // 8) + 1, height // 32, width // 32],
+                             device=comfy.model_management.intermediate_device())
+        latent[:, :, :t.shape[2]] = t
+        return (positive, negative, {"samples": latent},)

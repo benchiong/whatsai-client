@@ -33,7 +33,7 @@ class TextWidget(Widget):
 
 
 class IntWidget(Widget):
-    def __init__(self, display_name, param_name, min, max, step, default_value=None):
+    def __init__(self, display_name, param_name, min, max, step=1, default_value=None):
         super().__init__(
             param_name=param_name,
             display_name=display_name,
@@ -68,7 +68,7 @@ class IntWidget(Widget):
 
 
 class FloatWidget(Widget):
-    def __init__(self, display_name, param_name, min, max, step, round, default_value=None):
+    def __init__(self, display_name, param_name, min, max, step, round=2, default_value=None):
         super().__init__(
             param_name=param_name,
             display_name=display_name,
