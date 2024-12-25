@@ -23,7 +23,8 @@ from core.funcs import (
     Func_TripleCLIPLoader, Func_FluxGuidance, Func_UNETLoader, Func_BasicScheduler, Func_KSamplerSelect,
     Func_RandomNoise, Func_InpaintModelConditioning
 )
-from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget
+from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget, \
+    BoolWidget
 
 import comfy
 
@@ -1005,10 +1006,9 @@ class Comp_InpaintModelConditioning(Comp):
         inpaint_model_conditioning = Func_InpaintModelConditioning()
         self.register_func(inpaint_model_conditioning)
 
-        # todo: create bool widget and frontend should follow, then use it.
-        # widget_noise_mask = BoolWidget(
-        #     display_name='Noise Mask',
-        #     param_name='noise_mask',
-        #     default_value=noise_mask
-        # )
-        # self.register_widget(widget_noise_mask)
+        widget_noise_mask = BoolWidget(
+            display_name='Noise Mask',
+            param_name='noise_mask',
+            default_value=noise_mask
+        )
+        self.register_widget(widget_noise_mask)

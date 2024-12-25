@@ -6,6 +6,19 @@ from misc.helpers import file_type_guess
 from core.extras import tae_model_info_list
 
 
+class BoolWidget(Widget):
+    def __init__(self, display_name, param_name, default_value=None):
+        super().__init__(
+            param_name=param_name,
+            display_name=display_name,
+            default_value=default_value,
+            value_type=bool,
+        )
+
+    def valid_input(self, param_value) -> str | None:
+        return None
+
+
 class TextWidget(Widget):
     def __init__(self, display_name, param_name, default_value=None):
         super().__init__(

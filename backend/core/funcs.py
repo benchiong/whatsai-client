@@ -1263,7 +1263,7 @@ class Func_InpaintModelConditioning(Func):
             IOInfo(name='vae', data_type='VAE'),
             IOInfo(name='pixels', data_type='IMAGE'),
             IOInfo(name='mask', data_type='MASK'),
-            # IOInfo(name='noise_mask', data_type='BOOLEAN'),
+            IOInfo(name='noise_mask', data_type='BOOLEAN'),
         )
 
         self.set_outputs(

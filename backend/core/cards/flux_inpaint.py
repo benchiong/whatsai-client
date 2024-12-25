@@ -6,13 +6,13 @@ from core.comps import (
     Comp_VAELoader,
     Comp_FluxGuidance,
     Comp_LoadImage,
-    Comp_KSampler
+    Comp_KSampler,
+    Comp_InpaintModelConditioning
 )
 from core.funcs import (
     Func_VAEDecode,
     Func_SaveImage,
     Func_DifferentialDiffusion,
-    Func_InpaintModelConditioning
 )
 
 
@@ -76,7 +76,7 @@ class FluxInpaintCard(Card):
         load_image = Comp_LoadImage(name='load_image')
         image, mask = self.register_func(load_image)
 
-        inpaint_model_cond = Func_InpaintModelConditioning(name='inpaint_model_conditioning')
+        inpaint_model_cond = Comp_InpaintModelConditioning(name='inpaint_model_conditioning')
         self.link(positive_cond, inpaint_model_cond.inputs.positive)
         self.link(negative_cond, inpaint_model_cond.inputs.negative)
         self.link(vae, inpaint_model_cond.inputs.vae)

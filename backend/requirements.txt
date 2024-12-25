@@ -1,8 +1,12 @@
 # comfy
-torch
+
+# higher version will fail ltx on macOS
+# https://huggingface.co/Lightricks/LTX-Video/discussions/26
+torch==2.4.1
+torchvision==0.19.1
+torchaudio==2.4.1
+
 torchsde
-torchvision
-torchaudio
 einops
 transformers
 tokenizers>=0.13.3

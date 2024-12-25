@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const WidgetTypeEnumSchema = z.enum([
+  "BoolWidget",
   "IntWidget",
   "TextWidget",
   "SeedWidget",
@@ -25,6 +26,12 @@ export const WidgetSchema = z.object({
 });
 
 export type WidgetType = z.infer<typeof WidgetSchema>;
+
+export const WidgetBoolSchema = WidgetSchema.extend({
+  value: z.boolean(),
+});
+
+export type WidgetBoolType = z.infer<typeof WidgetBoolSchema>;
 
 export const WidgetIntSchema = WidgetSchema.extend({
   value: z.number(),
@@ -81,6 +88,7 @@ export type WidgetImageType = z.infer<typeof WidgetImageSchema>;
 export const WidgetUnionsWithoutGroupSchema = z.union([
   WidgetModelComboSchema,
   WidgetComboSchema, // the position matters, don't know why.
+  WidgetBoolSchema,
   WidgetIntSchema,
   WidgetTextSchema,
   WidgetSeedSchema,
@@ -130,6 +138,7 @@ export const WidgetUnionsSchema = z.union([
   SwitchableWidgetsSchema,
   WidgetModelComboSchema,
   WidgetComboSchema,
+  WidgetBoolSchema,
   WidgetIntSchema,
   WidgetTextSchema,
   WidgetSeedSchema,

@@ -7,11 +7,13 @@ import { WidgetModelCombo } from "./WidgetModelCombo";
 import { WidgetImage } from "./WidgetImage";
 import { GroupedWidgets } from "./GroupedWidgets";
 import { SwitchableWidgets } from "./SwitchableWidgets";
+import { WidgetBool } from "./WidgetBool";
 
 export type WidgetNameComponentMapType = {
   [key: string]: any;
 };
 export const WidgetNameComponentMap: WidgetNameComponentMapType = {
+  BoolWidget: WidgetBool,
   IntWidget: WidgetInt,
   FloatWidget: WidgetFloat,
   ComboWidget: WidgetCombo,
@@ -27,6 +29,7 @@ export type WidgetAndParams = {
   key: string;
   widgetType: string;
   Widget:
+    | typeof WidgetBool
     | typeof WidgetInt
     | typeof WidgetFloat
     | typeof WidgetCombo
@@ -52,6 +55,12 @@ export function widgetInfo2Widget(widgetInfo: any): WidgetAndParams | null {
 
   let params = {};
   switch (Widget) {
+    case WidgetBool:
+      params = {
+        text: widgetInfo["display_name"],
+        value: widgetInfo["value"],
+      };
+      break;
     case WidgetInt:
       params = {
         text: widgetInfo["display_name"],

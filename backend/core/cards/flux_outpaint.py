@@ -8,12 +8,12 @@ from core.comps import (
     Comp_LoadImage,
     Comp_KSampler,
     Comp_ImagePadForOutpaint,
+    Comp_InpaintModelConditioning,
 )
 from core.funcs import (
     Func_VAEDecode,
     Func_SaveImage,
     Func_DifferentialDiffusion,
-    Func_InpaintModelConditioning
 )
 
 
@@ -88,7 +88,7 @@ class FluxOutpaintCard(Card):
         self.link(image, image_pad_for_outpaint.inputs.image)
         image, mask = self.register_func(image_pad_for_outpaint)
 
-        inpaint_model_cond = Func_InpaintModelConditioning(name='inpaint_model_conditioning')
+        inpaint_model_cond = Comp_InpaintModelConditioning(name='inpaint_model_conditioning')
         self.link(positive_cond, inpaint_model_cond.inputs.positive)
         self.link(negative_cond, inpaint_model_cond.inputs.negative)
         self.link(vae, inpaint_model_cond.inputs.vae)

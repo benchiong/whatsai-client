@@ -46,7 +46,15 @@ class Widget(ABC):
             if param_value == 'None' or param_value is None:
                 return None
 
-            if self.value_type in [int, str, bool, float]:
+            if self.value_type == bool:
+                if param_value == 'true' or param_value == 1 or param_value == True:
+                    return True
+                elif param_value == 'false' or param_value == 0 or param_value == False:
+                    return False
+                else:
+                    return param_value
+
+            if self.value_type in [int, str, float]:
                 return self.value_type(param_value)
             else:
                 return param_value

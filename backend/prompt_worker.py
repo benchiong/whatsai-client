@@ -89,13 +89,14 @@ class PromptWorker:
     def run(cls, task_queue):
         logger.debug("PromptWorker start to run.")
 
-        try:
-            unfinished_tasks = Task.get_undone_tasks()
-            for t in unfinished_tasks:
-                TaskQueue.put_task(t)
-            logger.info(f"Recover prompt tasks {len(unfinished_tasks)}")
-        except Exception as e:
-            traceback.print_exc()
+        # todo: ask user to make the decision.
+        # try:
+        #     unfinished_tasks = Task.get_undone_tasks()
+        #     for t in unfinished_tasks:
+        #         TaskQueue.put_task(t)
+        #     logger.info(f"Recover prompt tasks {len(unfinished_tasks)}")
+        # except Exception as e:
+        #     traceback.print_exc()
 
         while True:
             task = TaskQueue.get()

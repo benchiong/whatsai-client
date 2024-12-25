@@ -146,6 +146,9 @@ async def generate(req: GenerationReq):
     return True
 
 
+# todo: add task cancel logic
+
+
 class WidgetFunctionParams(BaseModel):
     func_name: str
     extra_params: Optional[dict]
