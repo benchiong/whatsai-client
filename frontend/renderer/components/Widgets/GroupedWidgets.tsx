@@ -6,6 +6,8 @@ import {
   IconLayoutNavbarCollapse,
   IconLayoutBottombarCollapse,
 } from "@tabler/icons-react";
+import { useLocalStorage } from "@mantine/hooks";
+import { useCardContext } from "../../providers/CardProvider";
 
 export function GroupedWidgets({
   text,
@@ -20,14 +22,12 @@ export function GroupedWidgets({
 }) {
   const theme = useMantineTheme();
 
-  const [opened, setOpened] = useState(true);
+  const cardContext = useCardContext();
 
-  // useEffect(() => {
-  //   if (widgets.length > 2) {
-  //     setOpened(false);
-  //   }
-  // }, [widgets]);
-  // todo: use local storage to store card-text as index, support use action remember
+  const [collapsed, setCollapsed] = useLocalStorage({
+    key: `${cardContext.cardName}-${text}`,
+    defaultValue: widgets.length > 2,
+  });
 
   return (
     <Stack
@@ -40,8 +40,8 @@ export function GroupedWidgets({
       w={width}
       miw={220}
       bg={theme.colors.waLight[2]}
-      pb={opened ? 20 : 10}
-      gap={opened ? 20 : 0}
+      pb={!collapsed ? 20 : 10}
+      gap={!collapsed ? 20 : 0}
     >
       <Group
         justify={"space-between"}
@@ -65,7 +65,7 @@ export function GroupedWidgets({
         >
           {text}
         </Title>
-        {opened ? (
+        {!collapsed ? (
           <IconLayoutNavbarCollapse
             style={{
               color: "var(--mantine-color-waDark-8)",
@@ -75,7 +75,7 @@ export function GroupedWidgets({
               strokeWidth: "1px",
             }}
             onClick={(event) => {
-              setOpened(!opened);
+              setCollapsed(!collapsed);
             }}
           />
         ) : (
@@ -88,13 +88,13 @@ export function GroupedWidgets({
               strokeWidth: "1px",
             }}
             onClick={(event) => {
-              setOpened(!opened);
+              setCollapsed(!collapsed);
             }}
           />
         )}
       </Group>
       <Stack align={"center"} m={0} p={0}>
-        <Collapse in={opened} transitionDuration={100}>
+        <Collapse in={!collapsed} transitionDuration={100}>
           <WidgetsRender
             width={420}
             widgets={widgets}
