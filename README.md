@@ -89,7 +89,6 @@ Ensure both the frontend and backend are running simultaneously for the full app
 Frontend dependencies are listed in package.json, while backend dependencies are managed via requirements.txt.
 If you encounter issues, verify that your Node.js and Python versions meet the requirements.
 
-You
 
 ## Credits
 - ComfyUI - https://github.com/comfyanonymous/ComfyUI
