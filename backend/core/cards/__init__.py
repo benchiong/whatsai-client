@@ -4,6 +4,7 @@ from core.cards.flux_outpaint import FluxOutpaintCard
 from core.cards.flux_schnell import FluxSchnellCard
 from core.cards.ltx_i2v import LightricksI2VCard
 from core.cards.ltx_t2v import LightricksT2VCard
+from core.cards.mochi_t2v import MochiT2VCard
 from core.cards.sd_t2i import SDT2ICard
 from core.cards.sd_i2i import SDI2ICard
 from core.cards.sd_inpaint import SDInpaintCard
@@ -24,4 +25,5 @@ BUILTIN_CARDS_MAP = {
     FluxOutpaintCard.name: FluxOutpaintCard,
     LightricksT2VCard.name: LightricksT2VCard,
     LightricksI2VCard.name: LightricksI2VCard,
+    MochiT2VCard.name: MochiT2VCard,
 }

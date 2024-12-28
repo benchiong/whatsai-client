@@ -31,7 +31,8 @@ from core.funcs import (
     Func_EmptyLTXVLatentVideo,
     Func_LTXVScheduler,
     Func_SamplerCustom,
-    Func_SaveAnimatedWEBP, Func_LTXVImgToVideo
+    Func_SaveAnimatedWEBP,
+    Func_LTXVImgToVideo, Func_EmptyMochiLatentVideo
 )
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget, \
     BoolWidget
@@ -787,9 +788,10 @@ class Comp_ClipLoader(Comp):
                  name="Load CLIP",
                  display_name='Load CLIP',
                  default_clip_id='t5xxl_fp16.safetensors',
-                 default_model_type='sd3'
+                 default_model_type='sd3',
+                 grouped_widgets=True
                  ):
-        super().__init__(name=name, display_name=display_name)
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
 
         func_load_clip = Func_ClipLoader()
         self.register_func(func_load_clip)
@@ -1284,5 +1286,49 @@ class Comp_LTXVImgToVideo(Comp):
             min=1,
             max=5120,
             step=8
+        )
+        self.register_widget(widget_length)
+
+
+class Comp_EmptyMochiLatentVideo(Comp):
+    def __init__(self,
+                 name='EmptyMochiLatentVideo',
+                 display_name='Empty Mochi Latent Video',
+                 width=848,
+                 height=480,
+                 length=25
+                 ):
+        super().__init__(name=name, display_name=display_name)
+
+        empty_mochi_latent_video = Func_EmptyMochiLatentVideo()
+        self.register_func(empty_mochi_latent_video)
+
+        widget_width = IntWidget(
+            display_name='Width',
+            param_name='width',
+            default_value=width,
+            min=64,
+            max=5120,
+            step=16
+        )
+        self.register_widget(widget_width)
+
+        widget_height = IntWidget(
+            display_name='Height',
+            param_name='height',
+            default_value=height,
+            min=64,
+            max=5120,
+            step=16
+        )
+        self.register_widget(widget_height)
+
+        widget_length = IntWidget(
+            display_name='Length',
+            param_name='length',
+            default_value=length,
+            min=1,
+            max=5120,
+            step=6
         )
         self.register_widget(widget_length)

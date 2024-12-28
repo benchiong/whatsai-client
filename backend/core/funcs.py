@@ -1639,3 +1639,24 @@ class Func_LTXVImgToVideo(Func):
                              device=comfy.model_management.intermediate_device())
         latent[:, :, :t.shape[2]] = t
         return (positive, negative, {"samples": latent},)
+
+
+class Func_EmptyMochiLatentVideo(Func):
+    def __init__(self, name='EmptyMochiLatentVideo'):
+        super().__init__(name)
+
+        self.set_inputs(
+            IOInfo(name='width', data_type='INT'),
+            IOInfo(name='height', data_type='INT'),
+            IOInfo(name='length', data_type='INT'),
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, width, height, length, batch_size=1):
+        latent = torch.zeros([batch_size, 12, ((length - 1) // 6) + 1, height // 8, width // 8],
+                             device=comfy.model_management.intermediate_device())
+        return ({"samples": latent},)
