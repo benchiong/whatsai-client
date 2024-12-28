@@ -29,6 +29,9 @@ Simply put: You can translate any ComfyUI workflow into a WhatsAI Card (a UI bui
 | Flux Outpaint   | [ComfyUI Flux Outpaint](https://comfyanonymous.github.io/ComfyUI_examples/flux/#fill-inpainting-model)    |
 | Lightricks Text-to-Video    | [ComfyUI LTX-T2V](https://comfyanonymous.github.io/ComfyUI_examples/ltxv/#text-to-video)   |
 | Lightricks Image-to-Video   | [ComfyUI LTX-I2V](https://comfyanonymous.github.io/ComfyUI_examples/ltxv/#image-to-video)    |
+| Mochi Text-to-Video    | [ComfyUI Mochi-T2V](https://comfyanonymous.github.io/ComfyUI_examples/mochi/)   |
+| Hunyuan Dit Text-Image   | [ComfyUI Hunyuan-dit-T2I](https://comfyanonymous.github.io/ComfyUI_examples/hunyuan_dit/)    |
+| Hunyuan Text-to-Video    | [ComfyUI Hunyuan-Video](https://comfyanonymous.github.io/ComfyUI_examples/hunyuan_video/)   |
 
 more are coming... 
 
