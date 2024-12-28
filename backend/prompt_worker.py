@@ -216,7 +216,7 @@ class PromptWorker:
 
         logger.debug(
             f"Models before clean: {[model.model.model.__class__.__name__ for model in comfy.model_management.current_loaded_models]}")
-        comfy.model_management.cleanup_models(keep_clone_weights_loaded=True)
+        comfy.model_management.cleanup_models()
         logger.debug(
             f"Models after clean: {[model.model.model.__class__.__name__ for model in comfy.model_management.current_loaded_models]}")
         return to_deletes

@@ -32,7 +32,8 @@ from core.funcs import (
     Func_LTXVScheduler,
     Func_SamplerCustom,
     Func_SaveAnimatedWEBP,
-    Func_LTXVImgToVideo, Func_EmptyMochiLatentVideo
+    Func_LTXVImgToVideo, Func_EmptyMochiLatentVideo, Func_ModelSamplingSD3, Func_EmptyHunyuanLatentVideo,
+    Func_VAEDecodeTiled
 )
 from core.widgets import ModelComboWidget, TextWidget, SeedWidget, IntWidget, FloatWidget, ComboWidget, ImageWidget, \
     BoolWidget
@@ -76,6 +77,61 @@ class Comp_VAELoader(Comp):
         )
         widget_model_loader.set_optional(True)
         self.register_widget(widget_model_loader)
+
+
+class Comp_VAEDecodeTiled(Comp):
+    def __init__(self,
+                 name='VAEDecodeTiled',
+                 display_name='VAE Decode(Tiled)',
+                 tile_size=512,
+                 overlap=64,
+                 temporal_size=64,
+                 temporal_overlap=8,
+                 grouped_widgets=True
+                 ):
+        super().__init__(name=name, display_name=display_name, grouped_widgets=grouped_widgets)
+        vae_decode_tiled = Func_VAEDecodeTiled()
+        self.register_func(vae_decode_tiled)
+
+        widget_tile_size = IntWidget(
+            display_name='Tile Size',
+            param_name='tile_size',
+            default_value=tile_size,
+            min=64,
+            max=4096,
+            step=21
+        )
+        self.register_widget(widget_tile_size)
+
+        widget_overlap = IntWidget(
+            display_name='Overlap',
+            param_name='overlap',
+            default_value=overlap,
+            min=0,
+            max=4096,
+            step=32
+        )
+        self.register_widget(widget_overlap)
+
+        widget_temporal_size = IntWidget(
+            display_name='Temporal Size',
+            param_name='temporal_size',
+            default_value=temporal_size,
+            min=8,
+            max=4096,
+            step=4
+        )
+        self.register_widget(widget_temporal_size)
+
+        widget_temporal_overlap = IntWidget(
+            display_name='Temporal Overlap',
+            param_name='temporal_overlap',
+            default_value=temporal_overlap,
+            min=4,
+            max=4096,
+            step=4
+        )
+        self.register_widget(widget_temporal_overlap)
 
 
 class Comp_CLIPTextEncode(Comp):
@@ -846,7 +902,7 @@ class Comp_DualCLIPLoader(Comp):
             display_name='Model Type',
             param_name='type',
             default_value=default_model_type,
-            values=["sdxl", "sd3", "flux"]
+            values=["sdxl", "sd3", "flux", "hunyuan_video"]
         )
         self.register_widget(widget_clip_type)
 
@@ -997,7 +1053,7 @@ class Comp_KSamplerSelect(Comp):
 
 
 class Comp_RandomNoise(Comp):
-    def __init__(self, name='RandomNoise', display_name='Random Noise', noise_seed=None):
+    def __init__(self, name='RandomNoise', display_name='Random Noise', noise_seed=1):
         super().__init__(name=name, display_name=display_name)
 
         random_noise = Func_RandomNoise()
@@ -1330,5 +1386,62 @@ class Comp_EmptyMochiLatentVideo(Comp):
             min=1,
             max=5120,
             step=6
+        )
+        self.register_widget(widget_length)
+
+
+class Comp_ModelSamplingSD3(Comp):
+    def __init__(self, name='ModelSamplingSD3', display_name='Model Sampling SD3', shift=7.0):
+        super().__init__(name=name, display_name=display_name)
+
+        model_sampling_sd3 = Func_ModelSamplingSD3()
+        self.register_func(model_sampling_sd3)
+
+        widget_shift = FloatWidget(
+            display_name='Shift',
+            param_name='shift',
+            default_value=shift,
+            min=0.0,
+            max=100.0,
+            step=0.01,
+            round=2
+        )
+        self.register_widget(widget_shift)
+
+
+class Comp_EmptyHunyuanLatentVideo(Comp):
+    def __init__(self, name='', display_name='', width=840, height=480, length=25):
+        super().__init__(name=name, display_name=display_name)
+
+        empty_hunyuan_latent_video = Func_EmptyHunyuanLatentVideo()
+        self.register_func(empty_hunyuan_latent_video)
+
+        widget_width = IntWidget(
+            display_name='Width',
+            param_name='width',
+            default_value=width,
+            min=64,
+            max=5120,
+            step=16
+        )
+        self.register_widget(widget_width)
+
+        widget_height = IntWidget(
+            display_name='Height',
+            param_name='height',
+            default_value=height,
+            min=64,
+            max=5120,
+            step=16
+        )
+        self.register_widget(widget_height)
+
+        widget_length = IntWidget(
+            display_name='Length',
+            param_name='length',
+            default_value=length,
+            min=1,
+            max=5120,
+            step=4
         )
         self.register_widget(widget_length)

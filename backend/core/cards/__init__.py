@@ -11,6 +11,8 @@ from core.cards.sd_inpaint import SDInpaintCard
 from core.cards.sd_outpaint import SDOutpaintCard
 from core.cards.sdxl import SDXLCard
 from core.cards.sd3 import SD3Card
+from core.cards.hunyuan_dit import HunyuanDitCard
+from core.cards.hunyuan_t2v import HunyuanT2VCard
 
 BUILTIN_CARDS_MAP = {
     SDT2ICard.name: SDT2ICard,
@@ -26,4 +28,6 @@ BUILTIN_CARDS_MAP = {
     LightricksT2VCard.name: LightricksT2VCard,
     LightricksI2VCard.name: LightricksI2VCard,
     MochiT2VCard.name: MochiT2VCard,
+    HunyuanDitCard.name: HunyuanDitCard,
+    HunyuanT2VCard.name: HunyuanT2VCard
 }

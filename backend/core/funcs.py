@@ -18,6 +18,7 @@ import comfy.sample
 import comfy.utils
 import comfy.model_patcher
 import comfy.controlnet
+import comfy.model_sampling
 from comfy.taesd.taesd import TAESD
 from core.abstracts.func import Func, IOInfo
 from data_type.whatsai_artwork import Artwork
@@ -426,6 +427,44 @@ class Func_VAEDecode(Func):
 
     def run(self, vae, samples):
         images = vae.decode(samples["samples"])
+        if len(images.shape) == 5:  # Combine batches
+            images = images.reshape(-1, images.shape[-3], images.shape[-2], images.shape[-1])
+        return (images,)
+
+
+class Func_VAEDecodeTiled(Func):
+    def __init__(self, name='VAEDecodeTiled'):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='samples', data_type='LATENT'),
+            IOInfo(name='vae', data_type='VAE'),
+            IOInfo(name='tile_size', data_type='INT'),
+            IOInfo(name='overlap', data_type='INT'),
+            IOInfo(name='temporal_size', data_type='INT'),
+            IOInfo(name='temporal_overlap', data_type='INT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='image', data_type='IMAGE'),
+        )
+
+    def run(self, vae, samples, tile_size, overlap=64, temporal_size=64, temporal_overlap=8):
+        if tile_size < overlap * 4:
+            overlap = tile_size // 4
+        if temporal_size < temporal_overlap * 2:
+            temporal_overlap = temporal_overlap // 2
+        temporal_compression = vae.temporal_compression_decode()
+        if temporal_compression is not None:
+            temporal_size = max(2, temporal_size // temporal_compression)
+            temporal_overlap = min(1, temporal_size // 2, temporal_overlap // temporal_compression)
+        else:
+            temporal_size = None
+            temporal_overlap = None
+
+        compression = vae.spacial_compression_decode()
+        images = vae.decode_tiled(samples["samples"], tile_x=tile_size // compression, tile_y=tile_size // compression,
+                                  overlap=overlap // compression, tile_t=temporal_size, overlap_t=temporal_overlap)
         if len(images.shape) == 5:  # Combine batches
             images = images.reshape(-1, images.shape[-3], images.shape[-2], images.shape[-1])
         return (images,)
@@ -1658,5 +1697,54 @@ class Func_EmptyMochiLatentVideo(Func):
 
     def run(self, width, height, length, batch_size=1):
         latent = torch.zeros([batch_size, 12, ((length - 1) // 6) + 1, height // 8, width // 8],
+                             device=comfy.model_management.intermediate_device())
+        return ({"samples": latent},)
+
+
+class Func_ModelSamplingSD3(Func):
+    def __init__(self, name='ModelSamplingSD3'):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='model', data_type='MODEL'),
+            IOInfo(name='shift', data_type='FLOAT'),
+        )
+
+        self.set_outputs(
+            IOInfo(name='model', data_type='MODEL'),
+        )
+
+    def run(self, model, shift, multiplier=1000):
+        m = model.clone()
+
+        sampling_base = comfy.model_sampling.ModelSamplingDiscreteFlow
+        sampling_type = comfy.model_sampling.CONST
+
+        class ModelSamplingAdvanced(sampling_base, sampling_type):
+            pass
+
+        model_sampling = ModelSamplingAdvanced(model.model.model_config)
+        model_sampling.set_parameters(shift=shift, multiplier=multiplier)
+        m.add_object_patch("model_sampling", model_sampling)
+        return (m,)
+
+
+class Func_EmptyHunyuanLatentVideo(Func):
+    def __init__(self, name='EmptyHunyuanLatentVideo'):
+        super().__init__(name=name)
+
+        self.set_inputs(
+            IOInfo(name='width', data_type='INT'),
+            IOInfo(name='height', data_type='INT'),
+            IOInfo(name='length', data_type='INT'),
+
+        )
+
+        self.set_outputs(
+            IOInfo(name='latent', data_type='LATENT'),
+        )
+
+    def run(self, width, height, length, batch_size=1):
+        latent = torch.zeros([batch_size, 16, ((length - 1) // 4) + 1, height // 8, width // 8],
                              device=comfy.model_management.intermediate_device())
         return ({"samples": latent},)

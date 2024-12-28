@@ -1,10 +1,10 @@
 #code taken from: https://github.com/wl-zhao/UniPC and modified
 
 import torch
-import torch.nn.functional as F
 import math
+import logging
 
-from tqdm.auto import trange, tqdm
+from tqdm.auto import trange
 
 
 class NoiseScheduleVP:
@@ -80,7 +80,7 @@ class NoiseScheduleVP:
                     'linear' or 'cosine' for continuous-time DPMs.
         Returns:
             A wrapper object of the forward SDE (VP type).
-        
+
         ===============================================================
 
         Example:
@@ -208,7 +208,7 @@ def model_wrapper(
                 arXiv preprint arXiv:2202.00512 (2022).
             [2] Ho, Jonathan, et al. "Imagen Video: High Definition Video Generation with Diffusion Models."
                 arXiv preprint arXiv:2210.02303 (2022).
-    
+
         4. "score": marginal score function. (Trained by denoising score matching).
             Note that the score function and the noise prediction model follows a simple relationship:
             ```
@@ -245,7 +245,7 @@ def model_wrapper(
 
             [4] Ho, Jonathan, and Tim Salimans. "Classifier-free diffusion guidance."
                 arXiv preprint arXiv:2207.12598 (2022).
-        
+
 
     The `t_input` is the time label of the model, which may be discrete-time labels (i.e. 0 to 999)
     or continuous-time labels (i.e. epsilon to T).
@@ -475,7 +475,7 @@ class UniPC:
             return self.multistep_uni_pc_vary_update(x, model_prev_list, t_prev_list, t, order, **kwargs)
 
     def multistep_uni_pc_vary_update(self, x, model_prev_list, t_prev_list, t, order, use_corrector=True):
-        print(f'using unified predictor-corrector with order {order} (solver type: vary coeff)')
+        logging.info(f'using unified predictor-corrector with order {order} (solver type: vary coeff)')
         ns = self.noise_schedule
         assert order <= len(model_prev_list)
 
@@ -519,7 +519,6 @@ class UniPC:
             A_p = C_inv_p
 
         if use_corrector:
-            print('using corrector')
             C_inv = torch.linalg.inv(C)
             A_c = C_inv
 
@@ -622,7 +621,7 @@ class UniPC:
             B_h = torch.expm1(hh)
         else:
             raise NotImplementedError()
-            
+
         for i in range(1, order + 1):
             R.append(torch.pow(rks, i - 1))
             b.append(h_phi_k * factorial_i / B_h)
@@ -704,7 +703,6 @@ class UniPC:
     ):
         # t_0 = 1. / self.noise_schedule.total_N if t_end is None else t_end
         # t_T = self.noise_schedule.T if t_start is None else t_start
-        device = x.device
         steps = len(timesteps) - 1
         if method == 'multistep':
             assert steps >= order
