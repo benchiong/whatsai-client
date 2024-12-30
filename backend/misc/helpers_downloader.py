@@ -8,7 +8,7 @@ from urllib.parse import urlparse, parse_qs
 import requests
 import urllib3
 
-from data_type.whatsai_model_download_task import ModelDownloadTask, TaskStatus
+from data_type.whatsai_model_download_task import ModelDownloadTask, TaskStatus, TaskType
 
 #  https://python-forum.io/thread-36981.html
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -16,7 +16,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from data_type.civitai_model_version import CivitaiFileToDownload, CivitaiModelVersion
 from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
 from misc.helpers import async_get, gen_file_sha256, async_head, download_image, \
-    get_file_created_timestamp_and_datetime, get_file_size_in_kb, sync_get, sync_head, sync_download_image
+    get_file_created_timestamp_and_datetime, get_file_size_in_kb, sync_get, sync_head, sync_download_image, \
+    sync_gen_file_sha256
 from misc.json_cache import JsonCache
 from misc.logger import logger
 from misc.whatsai_dirs import model_info_images_dir
@@ -375,10 +376,56 @@ def file_to_download_2_model_download_info(
     return model_downloading_info, None
 
 
+async def huggingface_file_to_download_2_model_download_info(url_to_download: str, model_type: str):
+    file_name = Path(url_to_download).name
+
+    dir_obj = ModelDir.get(model_type)
+    if not dir_obj:
+        return None, "Dir record not found."
+
+    dir_path = dir_obj.default_dir
+    if not dir_path:
+        return None, "Dir to download not found."
+
+    local_path = Path(dir_path) / file_name
+
+    file_size_to_download_in_kb = None
+    response = await async_head(url_to_download, allow_redirects=True)
+    if response:
+        file_size_to_download = response.headers.get('Content-Length')
+        file_size_to_download_in_kb = float(file_size_to_download) / 1024
+
+    model_info = ModelInfo(
+        local_path=str(local_path),
+        file_name=file_name,
+        sha_256=None,
+        model_type=model_type,
+        image_path=None,
+        civit_model_version_id=None,
+        civit_model=None,
+        size_kb=file_size_to_download_in_kb,
+        dir=str(local_path.parent),
+        base_model=None,
+        civit_info_synced=False,
+        download_url=url_to_download
+    )
+
+    model_downloading_info = ModelDownloadingInfo(
+        url=url_to_download,
+        total_size=file_size_to_download_in_kb,
+        model_info=model_info,
+        downloaded_size=0.0,
+        downloaded_time=0.0,
+        progress=0.0
+    )
+
+    return model_downloading_info, None
+
+
 def download_civitai_model_task(download_model_info: ModelDownloadingInfo):
     while True:
         try:
-            local_model_path = download_civitai_model_worker(download_model_info)
+            local_model_path = download_model_worker(download_model_info)
             if local_model_path:
                 logger.debug(f"model downloaded: {local_model_path}")
                 download_model_info.finished = True
@@ -389,11 +436,13 @@ def download_civitai_model_task(download_model_info: ModelDownloadingInfo):
             logger.debug(e)
 
 
-def download_civitai_model_worker(model_downloading_info: ModelDownloadingInfo, task: ModelDownloadTask):
+def download_model_worker(model_downloading_info: ModelDownloadingInfo, task: ModelDownloadTask):
     """ Mostly from:
     https://github.com/butaixianran/Stable-Diffusion-Webui-Civitai-Helper/blob/main/scripts/ch_lib/downloader.py#L14
     thanks.
     """
+
+    is_huggingface_download_task = task.task_type == TaskType.download_huggingface_model.value
 
     local_path = model_downloading_info.model_info.local_path
     downloading_path = model_downloading_info.downloading_file()
@@ -415,7 +464,7 @@ def download_civitai_model_worker(model_downloading_info: ModelDownloadingInfo, 
         downloaded_size = 0
 
     # create header range
-    headers = {
+    headers = {'Range': 'bytes=%d-' % downloaded_size} if is_huggingface_download_task else {
         **def_headers_to_request_civitai,
         'Range': 'bytes=%d-' % downloaded_size,
     }
@@ -463,6 +512,7 @@ def download_civitai_model_worker(model_downloading_info: ModelDownloadingInfo, 
     model_info.size_kb = size_kb
     model_info.created_time_stamp = time_stamp
     model_info.created_datetime_str = datetime_str
+    model_info.sha_256 = sync_gen_file_sha256(model_info.local_path)
     model_info.save()
 
     # update model download info

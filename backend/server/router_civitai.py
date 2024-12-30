@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from misc.helpers_civitai import (
+from misc.helpers_downloader import (
     get_civitai_model_info_by_version_id,
     get_civitai_model_info_by_hash,
     get_civitai_model_info_by_model_id, parse_civitai_url, try_to_make_sure_first_image_is_real_image,
@@ -10,17 +10,21 @@ from misc.json_cache import JsonCache
 
 router = APIRouter()
 
+
 @router.get('/get_model_version_by_version_id')
 async def get_model_version_by_version_id(model_version_id: int):
     return await get_civitai_model_info_by_version_id(model_version_id)
+
 
 @router.get('/get_model_version_by_hash')
 async def get_model_version_by_hash(hash_str: str):
     return await get_civitai_model_info_by_hash(hash_str)
 
+
 @router.get('/get_model_version_by_model_id')
 async def get_model_version_by_model_id(model_id: int, return_model_version=False):
     return await get_civitai_model_info_by_model_id(model_id, return_model_version)
+
 
 @router.get("/get_civitai_model_version_info_with_url/")
 async def get_civitai_model_version_info_with_url(url_str, use_cache=True):
@@ -46,7 +50,8 @@ async def get_civitai_model_version_info_with_url(url_str, use_cache=True):
     if model_version_id:
         civit_model_version_info, error_info = await get_civitai_model_info_by_version_id(model_version_id)
     elif model_id:
-        civit_model_version_info, error_info = await get_civitai_model_info_by_model_id(model_id, return_model_version=True)
+        civit_model_version_info, error_info = await get_civitai_model_info_by_model_id(model_id,
+                                                                                        return_model_version=True)
     else:
         civit_model_version_info = None
         error_info = "No model version info found."

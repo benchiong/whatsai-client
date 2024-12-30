@@ -6,11 +6,10 @@ from data_type.civitai_model_version import CivitaiModelVersion
 from data_type.whatsai_model_download_task import ModelDownloadTask, TaskStatus, TaskType
 from data_type.whatsai_model_downloading_info import ModelDownloadingInfo
 from data_type.whatsai_model_info import ModelInfo
-from misc.helpers import sync_gen_file_sha256, gen_file_sha256
-from misc.helpers_civitai import sync_get_civitai_model_info_by_hash, \
-    sync_download_civitai_image_to_whatsai_file_dir, sync_get_real_image_info, file_to_download_2_model_download_info, \
-    download_civitai_model_worker, get_civitai_model_info_by_hash, download_civitai_image_to_whatsai_file_dir, \
-    get_real_image_info
+from misc.helpers import gen_file_sha256
+from misc.helpers_downloader import file_to_download_2_model_download_info, \
+    download_model_worker, get_civitai_model_info_by_hash, download_civitai_image_to_whatsai_file_dir, \
+    get_real_image_info, huggingface_file_to_download_2_model_download_info
 from misc.logger import logger
 
 
@@ -44,7 +43,7 @@ class ModelDownloadQueue:
     @classmethod
     def get_model_downloading_first(cls):
         for task_dict in cls.queue:
-            if task_dict.get('task_type') == 'download_civitai_model':
+            if task_dict.get('task_type') in ['download_civitai_model', 'download_huggingface_model']:
                 cls.queue.remove(task_dict)
                 return task_dict
         return cls.queue.pop(0)
@@ -77,8 +76,8 @@ class ModelDownloadWorker:
         logger.info(f"Start to {task.task_type} task: {task.id} ")
         if task.task_type == TaskType.sync_civitai_model_info.value:
             await cls.process_sync_civitai_model_info_task(task)
-        elif task.task_type == TaskType.download_civitai_model.value:
-            await cls.process_download_civitai_model_task(task)
+        elif task.task_type in [TaskType.download_huggingface_model.value, TaskType.download_civitai_model.value]:
+            await cls.process_download_model_task(task)
         else:
             task.task_status = TaskStatus.failed.value
             task.save()
@@ -117,7 +116,7 @@ class ModelDownloadWorker:
                 if hash_str:
                     model_info.sha_256 = hash_str
                     model_info.save()
-                cls.fail_sync_civitai_model_info_task(task, error)
+                cls.fail_task(task, error)
                 return
 
             civitai_model_info = CivitaiModelVersion(**civitai_model_info_dict)
@@ -146,11 +145,11 @@ class ModelDownloadWorker:
 
         except Exception as e:
             traceback.print_exc()
-            cls.fail_sync_civitai_model_info_task(task, str(e))
+            cls.fail_task(task, str(e))
 
     @classmethod
-    def fail_sync_civitai_model_info_task(cls, task: ModelDownloadTask, reason: str):
-        logger.error(f"Fail to process sync_civitai_model_info task: {task.id}, reason: {reason}")
+    def fail_task(cls, task: ModelDownloadTask, reason: str):
+        logger.error(f"Fail to process task: {task.id}, reason: {reason}")
         task.task_status = TaskStatus.failed.value
         task.save()
 
@@ -158,7 +157,7 @@ class ModelDownloadWorker:
     downloading_models = []
 
     @classmethod
-    async def process_download_civitai_model_task(cls, task: ModelDownloadTask):
+    async def process_download_model_task(cls, task: ModelDownloadTask):
         try:
             model_downloading_info = task.workload
 
@@ -168,29 +167,31 @@ class ModelDownloadWorker:
                 task.save()
                 return
 
+            print(model_downloading_info, model_downloading_info.is_file_exists())
+
             # Model is downloading, fail the new one
             if model_downloading_info.downloading_file() in cls.downloading_models:
-                cls.fail_sync_civitai_model_info_task(
+                cls.fail_task(
                     task,
                     f"model{model_downloading_info.downloading_file()} is downloading already."
                 )
                 return
 
             cls.downloading_models.append(model_downloading_info.downloading_file())
-            t = threading.Thread(target=cls.download_civitai_model_task, args=(model_downloading_info, task),
+            t = threading.Thread(target=cls.download_model_task, args=(model_downloading_info, task),
                                  daemon=True)
             t.start()
 
         except Exception as e:
             traceback.print_exc()
-            cls.fail_sync_civitai_model_info_task(task, str(e))
+            cls.fail_task(task, str(e))
 
     @classmethod
-    def download_civitai_model_task(cls, download_model_info: ModelDownloadingInfo, task: ModelDownloadTask):
+    def download_model_task(cls, download_model_info: ModelDownloadingInfo, task: ModelDownloadTask):
         retry = 5
         while retry > 0:
             try:
-                finished, local_model_path = download_civitai_model_worker(download_model_info, task)
+                finished, local_model_path = download_model_worker(download_model_info, task)
                 if finished:
                     logger.debug(f"model downloaded: {local_model_path}")
 
@@ -209,7 +210,7 @@ class ModelDownloadWorker:
                 logger.debug(f"download civitai model error: {e} retry: {6 - retry} ")
                 retry -= 1
 
-        cls.fail_sync_civitai_model_info_task(task, "Fail to download.")
+        cls.fail_task(task, "Fail to download.")
         cls.downloading_models.remove(download_model_info.downloading_file())
 
 
@@ -231,7 +232,7 @@ def submit_model_info_sync_task(model_info: ModelInfo):
     ModelDownloadQueue.put(task)
 
 
-def submit_model_download_task(civitai_model_version, files_to_download, image_downloaded):
+async def submit_model_download_task(civitai_model_version, files_to_download, image_downloaded):
     # one civitai version may include multiple models to download, map every model to one task
     for file_to_download in files_to_download:
         downloading_model_info, error_info = file_to_download_2_model_download_info(
@@ -250,3 +251,16 @@ def submit_model_download_task(civitai_model_version, files_to_download, image_d
         else:
             # todo: make file_to_download_2_model_download_info can not fail?
             pass
+
+
+async def submit_huggingface_download_task(url_to_download: str, model_type: str):
+    model_downloading_info, _ = await huggingface_file_to_download_2_model_download_info(url_to_download, model_type)
+
+    if model_downloading_info:
+        task = ModelDownloadTask(
+            task_type=TaskType.download_huggingface_model.value,
+            task_status=TaskStatus.queued.value,
+            workload=model_downloading_info
+        )
+        task.save()
+        ModelDownloadQueue.put(task)

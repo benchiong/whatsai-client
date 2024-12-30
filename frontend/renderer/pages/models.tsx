@@ -12,7 +12,11 @@ import {
 } from "@mantine/core";
 import { ModelInfoArrayType, ModelsRecordType } from "../data-type/model";
 import { ModelsRecord } from "../components/Model/ModelsRecord";
-import { getCivitaiModelVersionInfo, getModels } from "../lib/api";
+import {
+  getCivitaiModelVersionInfo,
+  getHuggingfaceModelVersionInfo,
+  getModels,
+} from "../lib/api";
 import { getKeyOfModelsRecord } from "../lib/utils";
 import { ModelDirModal } from "../components/Model/ModelDirModal";
 import { IconFolder } from "@tabler/icons-react";
@@ -25,6 +29,7 @@ import {
 import { AddCivitAIModelModal } from "../components/Model/AddCivitAIModelModal";
 import { ModelDownloadingContextProvider } from "../providers/ModelDownloadingProvider";
 import { ModelDownloading } from "../components/Model/ModelDownloading";
+import { AddHuggingfaceModelModal } from "../components/Model/AddHuggingfaceModelModal";
 
 export default function ModelPage() {
   const theme = useMantineTheme();
@@ -37,6 +42,12 @@ export default function ModelPage() {
   const [filesToDownload, setFilesToDownload] =
     useState<CivitaiFileToDownLoadArrayType>([]);
   const [addModelOpened, setAddModelOpened] = useState(false);
+
+  const [huggingfaceUrl, setHuggingfaceUrl] = useState<string | null>(null);
+  const [huggingfaceModelSize, setHuggingfaceModelSize] = useState<
+    number | null
+  >(null);
+  const [huggingfaceModelOpened, setHuggingfaceModelOpened] = useState(false);
 
   const [currentModelTypeName, setCurrentModelTypeName] = useState("");
   const [dirModalOpened, setDirModalOpened] = useState(false);
@@ -116,7 +127,7 @@ export default function ModelPage() {
           </Tooltip>
 
           <TextInput
-            placeholder={`URL of Civitai model(Checkpoint/LoRA/Ti/Hyper) to add. (e.g. https://civitai.com/models/XXX...)`}
+            placeholder={`URL of Civitai model page or Huggingface Download Url(Copy download link) `}
             flex={1}
             radius={"sm"}
             onChange={(e) => setUrl(e.target.value)}
@@ -127,28 +138,66 @@ export default function ModelPage() {
             disabled={!url}
             onClick={() => {
               setRequesting(true);
-              getCivitaiModelVersionInfo(url)
-                .then((r) => {
-                  setRequesting(false);
-                  if (r.error) {
-                    showErrorNotification({
-                      error: Error("Request civitAI failed."),
-                      reason: r.error.toString(),
-                    });
-                  } else {
-                    setCivitVersionInfo(r.model_version_info);
-                    setAddModelOpened(true);
-                  }
-                })
-                .catch((e) => {
-                  setRequesting(false);
+
+              if (url.includes("huggingface")) {
+                if (url.includes("/blob/")) {
                   showErrorNotification({
-                    error: Error(e),
-                    reason: e.reason,
+                    error: Error(
+                      "Url should be got by Huggingface Copy download link, not the page url.",
+                    ),
+                    reason:
+                      "Url should be got by Huggingface Copy download link, not the page url.",
                   });
+                  setRequesting(false);
+                  return;
+                }
+                setHuggingfaceUrl(url);
+                getHuggingfaceModelVersionInfo(url)
+                  .then((r) => {
+                    console.log("getHuggingfaceModelVersionInfo:", r);
+                    setRequesting(false);
+                    setHuggingfaceModelSize(r);
+                    setHuggingfaceModelOpened(true);
+                  })
+                  .catch((e) => {
+                    setRequesting(false);
+                    setHuggingfaceModelSize(null);
+
+                    showErrorNotification({
+                      error: Error(e),
+                      reason: e.reason,
+                    });
+                  });
+              } else if (url.includes("civitai")) {
+                getCivitaiModelVersionInfo(url)
+                  .then((r) => {
+                    setRequesting(false);
+                    if (r.error) {
+                      showErrorNotification({
+                        error: Error("Request civitAI failed."),
+                        reason: r.error.toString(),
+                      });
+                    } else {
+                      setCivitVersionInfo(r.model_version_info);
+                      setAddModelOpened(true);
+                    }
+                  })
+                  .catch((e) => {
+                    setRequesting(false);
+                    showErrorNotification({
+                      error: Error(e),
+                      reason: e.reason,
+                    });
+                  });
+              } else {
+                setRequesting(false);
+                showErrorNotification({
+                  error: Error(`Unsupported download url: ${url}.`),
+                  reason: `Unsupported download url: ${url}.`,
                 });
+              }
             }}
-          >{`Add CivitAI model`}</Button>
+          >{`Download model`}</Button>
         </Group>
         <ModelDownloading />
         {models.map((modelsRecord: ModelsRecordType) => {
@@ -173,6 +222,21 @@ export default function ModelPage() {
         opened={otherUIDirModalOpened}
         onClose={() => setOtherUIDirModelOpened(false)}
       />
+      {huggingfaceModelSize && (
+        <AddHuggingfaceModelModal
+          downloadUrl={url}
+          opened={huggingfaceModelOpened}
+          onClose={() => {
+            setHuggingfaceModelSize(null);
+            setHuggingfaceModelOpened(false);
+          }}
+          onDownload={() => {
+            setAddModelOpened(false);
+            setHuggingfaceModelOpened(false);
+          }}
+          modelSize={huggingfaceModelSize}
+        />
+      )}
       {civitVersionInfo && (
         <AddCivitAIModelModal
           opened={addModelOpened}

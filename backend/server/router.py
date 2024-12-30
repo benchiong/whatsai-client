@@ -275,7 +275,7 @@ def is_dir_path_ok(dir_path: str):
 
 @router.get('/test/other_test')
 async def other_test():
-    from misc.helpers_civitai import sync_get_civitai_model_info_by_hash
+    from misc.helpers_downloader import sync_get_civitai_model_info_by_hash
     success, resp, error = sync_get_civitai_model_info_by_hash(
         'b87f0c1c541e30f6b507795ef3aa9f7e5a1726af566f8970b07ed717c13ec5a5')
     print(success, resp, error)

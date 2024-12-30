@@ -72,11 +72,11 @@ def sync_post(url, data, headers=None, timeout=10, retry=3):
             traceback.print_exc()
 
 
-async def async_head(url, headers=None, timeout=10):
+async def async_head(url, headers=None, timeout=10, allow_redirects=False):
     retry = 3
     while retry > 0:
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=allow_redirects) as client:
                 return await client.head(url, headers=headers)
         except Exception as e:
             await asyncio.sleep(3)
@@ -85,11 +85,11 @@ async def async_head(url, headers=None, timeout=10):
     return None
 
 
-def sync_head(url, headers=None, timeout=10):
+def sync_head(url, headers=None, timeout=10, allow_redirects=False):
     retry = 3
     while retry > 0:
         try:
-            return requests.head(url, headers=headers, timeout=timeout)
+            return requests.head(url, headers=headers, timeout=timeout, allow_redirects=allow_redirects)
         except Exception as e:
             time.sleep(3)
             retry -= 1

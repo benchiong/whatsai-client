@@ -10,6 +10,7 @@ from misc.logger import logger
 
 class TaskType(str, Enum):
     download_civitai_model = 'download_civitai_model'
+    download_huggingface_model = 'download_huggingface_model'
     sync_civitai_model_info = 'sync_civitai_model_info'
 
 
@@ -88,7 +89,7 @@ class ModelDownloadTask(PyDBModel):
     def from_row(cls, row: tuple):
         workload = json.loads(row[3])
         task_type = row[1]
-        if task_type == 'download_civitai_model':
+        if task_type in ['download_civitai_model', 'download_huggingface_model']:
             workload = ModelDownloadingInfo(**workload)
         elif task_type == 'sync_civitai_model_info':
             workload = ModelInfo(**workload)
@@ -141,7 +142,7 @@ class ModelDownloadTask(PyDBModel):
         unfinished_status = ['queued', 'processing']
         query = """
                     SELECT * FROM model_download_task
-                    WHERE task_status IN ({}) AND task_type = 'download_civitai_model'
+                    WHERE task_status IN ({}) AND task_type IN ('download_civitai_model', 'download_huggingface_model')
                 """.format(
             ",".join("?" * len(unfinished_status))
         )

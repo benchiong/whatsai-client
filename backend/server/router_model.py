@@ -6,14 +6,15 @@ from data_type.whatsai_model_download_task import ModelDownloadTask
 from data_type.whatsai_model_info import ModelInfo
 from misc.constants import webui_model_dirs_map, comfyui_model_dirs_map
 from misc.helpers import (
-    get_model_files_in_dir
+    get_model_files_in_dir, async_head
 )
-from model_download_worker import submit_model_info_sync_task, submit_model_download_task
+from model_download_worker import submit_model_info_sync_task, submit_model_download_task, \
+    submit_huggingface_download_task
 from data_type.helpers import sort_model_info, SortType
 from data_type.whatsai_model_dir import ModelDir
 from data_type.whatsai_model_type import ModelType
 from data_type.base import PydanticModel
-from misc.helpers_civitai import download_civitai_image_to_whatsai_file_dir
+from misc.helpers_downloader import download_civitai_image_to_whatsai_file_dir
 
 router = APIRouter()
 
@@ -128,7 +129,31 @@ async def download_civitai_model(req: DownloadCivitAIModelReq):
     downloaded_image_path = await download_civitai_image_to_whatsai_file_dir(image_to_download)
     downloaded_image_path = downloaded_image_path if downloaded_image_path else image_to_download
 
-    submit_model_download_task(civitai_model_version, files_to_download, downloaded_image_path)
+    await submit_model_download_task(civitai_model_version, files_to_download, downloaded_image_path)
+
+
+class DownloadHuggingFaceModelReq(PydanticModel):
+    url_to_download: str
+    model_type: str
+
+
+@router.post('/download_huggingface_model')
+async def download_huggingface_model(req: DownloadHuggingFaceModelReq):
+    url_to_download = req.url_to_download
+    model_type = req.model_type
+
+    await submit_huggingface_download_task(url_to_download, model_type)
+
+
+@router.get('/get_huggingface_model_size')
+async def get_huggingface_model_size(url_to_download: str):
+    response = await async_head(url_to_download, allow_redirects=True)
+    if response:
+        file_size_to_download = response.headers.get('Content-Length')
+        print('response.headers:', response.headers)
+        file_size_to_download_in_kb = float(file_size_to_download) / 1024
+        return file_size_to_download_in_kb
+    return None
 
 
 class OtherUIReq(PydanticModel):

@@ -177,7 +177,7 @@ export function AddCivitAIModelModal({
                             onFileToDownloadChanged(filesToDownload);
                           }}
                           key={filesToDownload[index].civitaiFile.id}
-                          fileToDownload={filesToDownload[index]}
+                          modelType={filesToDownload[index].modelType}
                         />
                       )}
                     </Group>

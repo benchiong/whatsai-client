@@ -7,14 +7,14 @@ export function ModelTypeSelector({
   onChange,
   width = "100%",
   height = 36,
-  fileToDownload,
+  modelType = null,
 }: {
   onChange?: (value: string) => void;
   width?: number | string;
   height?: number;
-  fileToDownload: CivitaiFileToDownloadType;
+  modelType?: string | null;
 }) {
-  const [value, setValue] = useState<string | null>(fileToDownload.modelType);
+  const [value, setValue] = useState<string | null>(modelType);
   const [values, setValues] = useState<string[]>([]);
 
   useEffect(() => {

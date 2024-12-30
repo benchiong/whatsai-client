@@ -9,13 +9,9 @@ import { z } from "zod";
 import {
   DownloadingModelTaskArraySchema,
   DownloadingModelTaskArrayType,
-  DownloadingModelTaskSchema,
-  DownloadingModelTaskType,
   FrontModelDirType,
   mapModelDirSchema2FrontModelDirSchema,
   ModelDirSchema,
-  ModelDownloadingInfoArraySchema,
-  ModelDownloadingInfoArrayType,
   ModelInfoArraySchema,
   ModelInfoArrayType,
   ModelInfoListSchema,
@@ -639,6 +635,32 @@ export async function downloadCivitaiModel(
   }
 }
 
+export async function downloadHuggingfaceModel(
+  urlToDownload: string,
+  modelType: string,
+): Promise<any> {
+  try {
+    const url = serverUrl + "model/download_huggingface_model";
+
+    const data = {
+      url_to_download: urlToDownload,
+      model_type: modelType,
+    };
+
+    const result = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return await result.json();
+  } catch (e) {
+    console.log(e);
+    return null;
+  }
+}
+
 export async function getModelDir(
   modelType: string,
 ): Promise<FrontModelDirType | null> {
@@ -880,6 +902,23 @@ export async function getCivitaiModelVersionInfo(
       model_version_info: null,
       error: "Unknown error.",
     });
+  }
+}
+
+export async function getHuggingfaceModelVersionInfo(
+  url: string,
+): Promise<number | null> {
+  try {
+    const resp = await fetch(
+      serverUrl + `model/get_huggingface_model_size?url_to_download=${url}`,
+      {
+        method: "GET",
+      },
+    );
+    return await resp.json();
+  } catch (e) {
+    console.error(e);
+    return null;
   }
 }
 
